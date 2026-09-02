@@ -1,5 +1,6 @@
 import { mockGuard } from "@/lib/dev-guard";
 import {
+  nextZernioMessageId,
   resetZernioMock,
   zernioMockState,
   zernioTokenIsBad,
@@ -63,9 +64,9 @@ export async function POST(req: Request, ctx: Ctx) {
   ) {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const state = zernioMockState();
-    const n = ++state.seq;
+    const id = nextZernioMessageId();
     state.sent.push({
-      n,
+      n: state.seq,
       conversationId: decodeURIComponent(path[2]!),
       accountId: body.accountId ? String(body.accountId) : null,
       message: String(body.message ?? ""),
@@ -74,7 +75,7 @@ export async function POST(req: Request, ctx: Ctx) {
       idempotencyKey: req.headers.get("idempotency-key"),
       at: new Date().toISOString(),
     });
-    return Response.json({ message: { id: `zmock_${n}` } });
+    return Response.json({ message: { id } });
   }
 
   return Response.json({});

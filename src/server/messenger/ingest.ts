@@ -7,7 +7,7 @@ import {
   getMessengerCredentialsByPageId,
 } from "@/server/messenger/credentials";
 import { fetchMessengerProfileName } from "@/server/messenger/send";
-import { parseZernioEvent, type ZernioEvent } from "@/server/zernio";
+import type { ZernioEvent } from "@/server/zernio";
 
 /**
  * 017 — Adaptadores de entrada del canal de Messenger.
@@ -201,17 +201,6 @@ async function contactExists(
     )
     .limit(1);
   return rows.length > 0;
-}
-
-/** Resuelve el secreto de firma de la cuenta de Zernio ANTES de procesar. */
-export async function resolveZernioMessengerSecret(
-  rawBody: string
-): Promise<{ secret: string | null; accountRef: string | null }> {
-  const evt = parseZernioEvent(rawBody);
-  const accountRef = evt?.account?.id ?? null;
-  if (!accountRef) return { secret: null, accountRef: null };
-  const creds = await getMessengerCredentialsByAccountRef(accountRef);
-  return { secret: creds?.webhookSecret ?? null, accountRef };
 }
 
 export async function processMetaPagePayload(payload: unknown): Promise<void> {
