@@ -29,8 +29,22 @@ export function zernioMockState(): ZernioMockState {
   return g.__voceroZernioMock;
 }
 
+/** Vacía lo enviado. El contador NO se reinicia: ver `nextZernioMessageId`. */
 export function resetZernioMock(): void {
-  g.__voceroZernioMock = { seq: 0, sent: [] };
+  zernioMockState().sent = [];
+}
+
+/**
+ * Id del mensaje que el mock le devuelve al CRM.
+ *
+ * Lleva la marca de tiempo del proceso, no solo un contador: el CRM guarda ese
+ * id con un índice ÚNICO, así que dos corridas del arnés contra la misma base
+ * chocarían con `zmock_1` y el envío fallaría por una colisión del harness,
+ * que se ve igual que un bug del producto.
+ */
+export function nextZernioMessageId(): string {
+  const state = zernioMockState();
+  return `zmock_${Date.now().toString(36)}_${++state.seq}`;
 }
 
 /**

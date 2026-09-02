@@ -10,6 +10,7 @@ import {
 } from "@/server/messenger/ingest";
 import { buildMessengerSendBody } from "@/server/messenger/send";
 import { isValidZernioSignature, looksLikeMetaPayload } from "@/server/zernio";
+import { zernioTargetChannel } from "@/server/zernio/dispatch";
 import { createHmac } from "node:crypto";
 
 const PAGE = "1092837465";
@@ -272,6 +273,25 @@ describe("017 · firma de Zernio (control de seguridad compartido)", () => {
     expect(looksLikeMetaPayload({ object: "instagram" }, "page")).toBe(false);
     expect(looksLikeMetaPayload(zernioEvent(), "page")).toBe(false);
     expect(looksLikeMetaPayload(null, "page")).toBe(false);
+  });
+});
+
+describe("017 · reparto de Zernio por plataforma (un webhook, varios canales)", () => {
+  it("manda cada plataforma a su canal", () => {
+    // Zernio entrega TODAS las cuentas de la llave por un solo webhook: si
+    // cada canal atendiera solo su URL, quien tenga el webhook apuntado a
+    // Instagram vería sus mensajes de Messenger descartados en silencio.
+    expect(zernioTargetChannel(zernioEvent({ account: { id: ACCOUNT, platform: "instagram" } }))).toBe("instagram");
+    expect(zernioTargetChannel(zernioEvent({ account: { id: ACCOUNT, platform: "facebook" } }))).toBe("messenger");
+    expect(zernioTargetChannel(zernioEvent({ account: { id: ACCOUNT, platform: "MESSENGER" } }))).toBe("messenger");
+  });
+
+  it("una plataforma que Vocero no atiende no es de nadie", () => {
+    for (const platform of ["whatsapp", "x", "tiktok", "linkedin", ""]) {
+      expect(zernioTargetChannel(zernioEvent({ account: { id: ACCOUNT, platform } }))).toBeNull();
+    }
+    expect(zernioTargetChannel(null)).toBeNull();
+    expect(zernioTargetChannel({ object: "page" })).toBeNull();
   });
 });
 

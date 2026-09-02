@@ -1,16 +1,13 @@
 import { after } from "next/server";
 import { getEnv } from "@/lib/env";
 import { isValidSignature, isValidWebhookToken } from "@/server/inbox/webhook";
-import {
-  processMetaPagePayload,
-  processZernioMessengerEvent,
-  resolveZernioMessengerSecret,
-} from "@/server/messenger/ingest";
+import { processMetaPagePayload } from "@/server/messenger/ingest";
 import {
   channelDisabledResponse,
   isChannelEnabled,
 } from "@/server/channels/enabled";
 import { isValidZernioSignature, looksLikeMetaPayload, zernioSignatureFrom } from "@/server/zernio";
+import { processZernioPayload, resolveZernioSecret } from "@/server/zernio/dispatch";
 
 /**
  * 017 — Webhook público del canal de Messenger.
@@ -82,7 +79,7 @@ export async function POST(req: Request, { params }: Params) {
   } else {
     // Zernio: la firma se valida contra el secreto de ESTA cuenta, que hay que
     // resolver leyendo el cuerpo primero.
-    const { secret } = await resolveZernioMessengerSecret(rawBody);
+    const { secret } = await resolveZernioSecret(rawBody);
     if (!isValidZernioSignature(rawBody, zernioSignatureFrom(req.headers), secret)) {
       return new Response(null, { status: 401 });
     }
@@ -92,8 +89,10 @@ export async function POST(req: Request, { params }: Params) {
   // YA y se procesa fuera de la ruta.
   after(async () => {
     try {
+      // Un evento de Zernio se reparte por plataforma: la misma URL sirve para
+      // Instagram y para Messenger, porque Zernio entrega todo por un webhook.
       if (isMeta) await processMetaPagePayload(payload);
-      else await processZernioMessengerEvent(payload);
+      else await processZernioPayload(payload);
     } catch (err) {
       console.error("[messenger] error procesando payload:", err);
     }
