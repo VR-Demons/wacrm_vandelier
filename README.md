@@ -293,12 +293,28 @@ y el agente son los mismos: un lead es un lead, escriba por donde escriba.
 
 ### Messenger (página de Facebook)
 
+Dos formas de traer los mensajes; se elige en **Configuración → Messenger**.
+
+**Con Zernio** (API unificada, la misma que puede servir Instagram):
+
+1. Vincula la página de Facebook en el panel de [Zernio](https://zernio.com) y
+   copia el `accountId` de esa cuenta. Crea una API key (Settings → API Keys;
+   se muestra una sola vez).
+2. En Vocero, **Configuración → Messenger**: elige *Zernio*, pega el
+   `accountId`, la API key y —recomendado— un secreto de webhook. Pulsa
+   *Probar y guardar*: la llave se valida contra Zernio antes de guardarse
+   cifrada, y la pantalla te enseña la URL de callback.
+3. En Zernio, da de alta ese endpoint con el evento `message.received` y el
+   mismo secreto. El webhook de Zernio entrega todas tus plataformas por la
+   misma URL; Vocero solo ingiere aquí lo de Facebook.
+
+**Con una app propia de Meta**:
+
 1. En [developers.facebook.com](https://developers.facebook.com) crea (o usa)
    una app con el producto **Messenger** y genera el **token de acceso de la
    página** con el permiso `pages_messaging`. Anota el **ID de la página**.
-2. En Vocero, **Configuración → Messenger**: pega el ID y el token y pulsa
-   *Probar y guardar*. Vocero valida el token contra Meta antes de guardarlo
-   (cifrado en reposo) y te enseña la URL del webhook.
+2. En Vocero, **Configuración → Messenger**: elige *App propia de Meta*, pega
+   el ID y el token y pulsa *Probar y guardar*.
 3. En la app de Meta, **Messenger → Webhooks**: objeto `page`, campo
    `messages`, esa URL de callback y el token de verificación que enseña la
    pantalla. Suscribe la página a la app.
@@ -310,8 +326,9 @@ con la etiqueta `HUMAN_AGENT` de Meta (hasta 7 días); no hay plantillas.
 Hoy el canal es de texto: los adjuntos que te manden se ven como
 «📎 Imagen» para que sepas que llegaron, y los adjuntos salientes no están.
 
-Sin App Review, la página solo recibe mensajes de cuentas con un rol en la
-app; para atender al público hay que aprobar `pages_messaging`.
+Con app propia y sin App Review, la página solo recibe mensajes de cuentas con
+un rol en la app; para atender al público hay que aprobar `pages_messaging`.
+Por Zernio ese trámite ya está resuelto del lado de ellos.
 
 ### Instagram (DMs del perfil profesional)
 

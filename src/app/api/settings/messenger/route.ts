@@ -10,6 +10,7 @@ import {
   channelDisabledResponse,
   isChannelEnabled,
 } from "@/server/channels/enabled";
+import { verifyZernioToken } from "@/server/zernio";
 
 export const dynamic = "force-dynamic";
 
@@ -20,8 +21,10 @@ export const GET = withAuth(async (session) => {
   if (!creds) return Response.json({ connection: null });
   return Response.json({
     connection: {
+      source: creds.source,
       pageId: creds.pageId,
       pageName: creds.pageName,
+      accountRef: creds.accountRef,
       status: creds.status,
       tokenLast4: tokenLast4(creds.token),
     },
@@ -29,13 +32,16 @@ export const GET = withAuth(async (session) => {
 });
 
 const putSchema = z.object({
-  pageId: z.string().trim().min(1),
+  source: z.enum(["zernio", "meta"]).default("meta"),
+  pageId: z.string().trim().min(1).nullish(),
+  accountRef: z.string().trim().min(1).nullish(),
   token: z.string().trim().min(1),
+  webhookSecret: z.string().trim().min(1).nullish(),
 });
 
 /**
- * Guarda la conexión validando ANTES contra Meta, igual que el wizard de
- * WhatsApp: un token que no sirve no llega a la base. Solo el propietario
+ * Guarda la conexión validando ANTES contra la plataforma, igual que el wizard
+ * de WhatsApp: un token que no sirve no llega a la base. Solo el propietario
  * de la organización puede hacerlo.
  */
 export const PUT = withAuth(async (session, req: Request) => {
@@ -45,16 +51,36 @@ export const PUT = withAuth(async (session, req: Request) => {
   }
   const body = await parseBody(req, putSchema);
   if (!body.ok) return body.response;
-  const data = body.data;
+  // `.default()` deja el tipo opcional aunque Zod siempre lo rellene: se fija
+  // aquí para que el resto del handler trabaje con un valor cerrado.
+  const data = { ...body.data, source: body.data.source ?? "meta" };
 
-  const check = await verify(data.pageId, data.token);
+  if (data.source === "meta" && !data.pageId) {
+    return apiError(
+      422,
+      "invalid_body",
+      "En modo Meta hace falta el ID de la página"
+    );
+  }
+  if (data.source === "zernio" && !data.accountRef) {
+    return apiError(
+      422,
+      "invalid_body",
+      "En modo Zernio hace falta el accountId de la cuenta conectada"
+    );
+  }
+
+  const check = await verify(data);
   if (!check.ok) return apiError(check.status, check.code, check.message);
 
   await saveMessengerCredentials({
     organizationId: session.organizationId,
-    pageId: data.pageId,
+    source: data.source,
+    pageId: data.pageId ?? null,
     pageName: check.pageName,
+    accountRef: data.accountRef ?? null,
     token: data.token,
+    webhookSecret: data.webhookSecret ?? null,
   });
 
   return Response.json({ ok: true, pageName: check.pageName });
@@ -64,44 +90,55 @@ type Check =
   | { ok: true; pageName: string | null }
   | { ok: false; status: number; code: string; message: string };
 
-/**
- * El token debe ser de ESA página: se le pregunta a Graph quién es y se
- * compara el id. Un token de otra página guardaría credenciales que reciben
- * webhooks de una y contestan por otra.
- */
-async function verify(pageId: string, token: string): Promise<Check> {
+type VerifyInput = Omit<z.infer<typeof putSchema>, "source"> & {
+  source: "zernio" | "meta";
+};
+
+async function verify(data: VerifyInput): Promise<Check> {
+  if (data.source === "zernio") {
+    try {
+      await verifyZernioToken(data.token);
+      return { ok: true, pageName: null };
+    } catch (err) {
+      return translate(err, "La API key de Zernio no es válida");
+    }
+  }
+
+  // Meta: el token debe ser de ESA página. Un token de otra guardaría
+  // credenciales que reciben webhooks de una y contestan por otra.
   try {
     const res = await graphRequest<{ id?: string; name?: string }>(
-      `${pageId}?fields=id,name`,
-      { token }
+      `${data.pageId}?fields=id,name`,
+      { token: data.token }
     );
-    if (res.id && res.id !== pageId) {
+    if (res.id && res.id !== data.pageId) {
       return {
         ok: false,
         status: 422,
         code: "id_mismatch",
-        message: `El token pertenece a la página ${res.id}, no a ${pageId}`,
+        message: `El token pertenece a la página ${res.id}, no a ${data.pageId}`,
       };
     }
     return { ok: true, pageName: res.name?.trim() || null };
   } catch (err) {
-    if (err instanceof MetaApiError) {
-      if (err.status === 0 || err.status >= 500) {
-        return {
-          ok: false,
-          status: 503,
-          code: "platform_unavailable",
-          message: "No se pudo contactar a Meta; intenta de nuevo",
-        };
-      }
+    return translate(
+      err,
+      "El token de la página no es válido o no tiene permiso de mensajes (pages_messaging)"
+    );
+  }
+}
+
+function translate(err: unknown, invalidMessage: string): Check {
+  if (err instanceof MetaApiError) {
+    if (err.status === 0 || err.status >= 500) {
       return {
         ok: false,
-        status: 422,
-        code: "invalid_token",
-        message:
-          "El token de la página no es válido o no tiene permiso de mensajes (pages_messaging)",
+        status: 503,
+        code: "platform_unavailable",
+        message: "No se pudo contactar la plataforma; intenta de nuevo",
       };
     }
-    throw err;
+    return { ok: false, status: 422, code: "invalid_token", message: invalidMessage };
   }
+  throw err;
 }

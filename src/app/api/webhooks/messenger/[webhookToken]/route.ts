@@ -1,19 +1,25 @@
 import { after } from "next/server";
 import { getEnv } from "@/lib/env";
 import { isValidSignature, isValidWebhookToken } from "@/server/inbox/webhook";
-import { processMessengerPayload } from "@/server/messenger/ingest";
+import {
+  processMetaPagePayload,
+  processZernioMessengerEvent,
+  resolveZernioMessengerSecret,
+} from "@/server/messenger/ingest";
 import {
   channelDisabledResponse,
   isChannelEnabled,
 } from "@/server/channels/enabled";
+import { isValidZernioSignature, looksLikeMetaPayload, zernioSignatureFrom } from "@/server/zernio";
 
 /**
  * 017 — Webhook público del canal de Messenger.
  *
  * Mismo patrón de dos capas que los de WhatsApp e Instagram: el segmento
- * [webhookToken] debe coincidir (si no → 404 sin efectos) y encima la firma
- * de Meta con el App Secret. Se configura en la app de Meta, producto
- * Messenger → Webhooks: objeto `page`, campo `messages`.
+ * [webhookToken] debe coincidir (si no → 404 sin efectos) y encima la firma.
+ * Acepta las dos fuentes por la misma URL porque sus payloads son
+ * inconfundibles: Meta manda `object: "page"`, Zernio manda un evento plano
+ * con `account`.
  */
 export const dynamic = "force-dynamic";
 
@@ -27,7 +33,7 @@ export async function GET(req: Request, { params }: Params) {
     return new Response(null, { status: 404 });
   }
 
-  // Handshake de Meta: devuelve el challenge en texto plano.
+  // Handshake de Meta (Zernio no lo hace, pero responderlo no estorba).
   const url = new URL(req.url);
   const mode = url.searchParams.get("hub.mode");
   const token = url.searchParams.get("hub.verify_token");
@@ -49,33 +55,45 @@ export async function POST(req: Request, { params }: Params) {
 
   const rawBody = await req.text();
 
-  // Meta firma cada entrega con el App Secret. Sin esta capa, quien conozca
-  // la URL secreta puede inyectar mensajes falsos: el agente los contestaría
-  // enviando un mensaje REAL desde la página al destinatario que el atacante
-  // elija.
-  if (
-    !isValidSignature(
-      rawBody,
-      req.headers.get("x-hub-signature-256"),
-      env.META_APP_SECRET
-    )
-  ) {
-    return new Response(null, { status: 401 });
-  }
-
   let payload: unknown;
   try {
     payload = JSON.parse(rawBody);
   } catch {
-    // Cuerpo ilegible: 200 igualmente para que Meta no reintente en vano.
+    // Cuerpo ilegible: 200 igualmente para que la fuente no reintente en vano.
     return Response.json({ received: true });
   }
 
-  // Meta corta a los pocos segundos y reintenta: se acusa recibo YA y se
-  // procesa fuera de la ruta.
+  const isMeta = looksLikeMetaPayload(payload, "page");
+
+  if (isMeta) {
+    // Meta firma cada entrega con el App Secret. Sin esta capa, quien conozca
+    // la URL secreta puede inyectar mensajes falsos: el agente los contestaría
+    // enviando un mensaje REAL desde la página al destinatario que el atacante
+    // elija.
+    if (
+      !isValidSignature(
+        rawBody,
+        req.headers.get("x-hub-signature-256"),
+        env.META_APP_SECRET
+      )
+    ) {
+      return new Response(null, { status: 401 });
+    }
+  } else {
+    // Zernio: la firma se valida contra el secreto de ESTA cuenta, que hay que
+    // resolver leyendo el cuerpo primero.
+    const { secret } = await resolveZernioMessengerSecret(rawBody);
+    if (!isValidZernioSignature(rawBody, zernioSignatureFrom(req.headers), secret)) {
+      return new Response(null, { status: 401 });
+    }
+  }
+
+  // Zernio corta a los 5 segundos y reintenta; Meta también. Se acusa recibo
+  // YA y se procesa fuera de la ruta.
   after(async () => {
     try {
-      await processMessengerPayload(payload);
+      if (isMeta) await processMetaPagePayload(payload);
+      else await processZernioMessengerEvent(payload);
     } catch (err) {
       console.error("[messenger] error procesando payload:", err);
     }

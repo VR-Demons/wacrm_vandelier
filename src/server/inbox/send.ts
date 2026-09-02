@@ -609,6 +609,9 @@ async function callMessengerSend(
     const res = await sendMessengerText({
       credentials: creds,
       recipient: target.recipient,
+      // Zernio responde dentro de SU conversación, no al PSID: sin esta
+      // referencia el envío no tiene a dónde ir.
+      threadRef: target.conversation.channelThreadRef,
       text,
       humanAgentTag,
     });

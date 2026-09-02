@@ -4,20 +4,24 @@ import { newId } from "@/lib/db/ids";
 import { decryptSecret, encryptSecret } from "@/lib/crypto";
 
 /**
- * 017 — Credenciales del canal de Messenger: la página de Facebook y su
- * token de acceso.
+ * 017 — Credenciales del canal de Messenger.
  *
- * Mismo contrato que las de WhatsApp e Instagram: el token viaja descifrado
- * solo en memoria y nunca sale en una respuesta de la API — hacia fuera se
- * expone únicamente su cola.
+ * Dos fuentes, como en Instagram: la API unificada de Zernio (una llave, y el
+ * enrutado por `accountRef`) o una app propia de Meta (token de la página, y
+ * el enrutado por `pageId`). El token viaja descifrado solo en memoria y nunca
+ * sale en una respuesta de la API — hacia fuera se expone su cola.
  */
 
 export type MessengerCredentials = {
   id: string;
   organizationId: string;
-  /** ID de la página de Facebook: por él enruta el webhook (`entry[].id`). */
-  pageId: string;
+  source: "zernio" | "meta";
+  /** ID de la página de Facebook. En modo Zernio puede no conocerse. */
+  pageId: string | null;
   pageName: string | null;
+  /** Zernio: accountId de la cuenta conectada. Meta directo: null. */
+  accountRef: string | null;
+  webhookSecret: string | null;
   status: "connected" | "reconnect_required";
   token: string;
 };
@@ -28,8 +32,11 @@ function toCredentials(row: Row): MessengerCredentials {
   return {
     id: row.id,
     organizationId: row.organizationId,
+    source: row.source,
     pageId: row.pageId,
     pageName: row.pageName,
+    accountRef: row.accountRef,
+    webhookSecret: row.webhookSecret,
     status: row.status,
     token: decryptSecret({
       cipher: row.tokenCipher,
@@ -62,11 +69,26 @@ export async function getMessengerCredentialsByPageId(
   return rows[0] ? toCredentials(rows[0]) : null;
 }
 
+/** Enrutado del webhook de Zernio: el evento trae `account.id`, no la página. */
+export async function getMessengerCredentialsByAccountRef(
+  accountRef: string
+): Promise<MessengerCredentials | null> {
+  const rows = await getDb()
+    .select()
+    .from(schema.messengerCredentials)
+    .where(eq(schema.messengerCredentials.accountRef, accountRef))
+    .limit(1);
+  return rows[0] ? toCredentials(rows[0]) : null;
+}
+
 export async function saveMessengerCredentials(input: {
   organizationId: string;
-  pageId: string;
+  source: "zernio" | "meta";
+  pageId: string | null;
   pageName: string | null;
+  accountRef: string | null;
   token: string;
+  webhookSecret: string | null;
 }): Promise<void> {
   const db = getDb();
   const enc = encryptSecret(input.token);
@@ -74,11 +96,14 @@ export async function saveMessengerCredentials(input: {
 
   const values = {
     organizationId: input.organizationId,
+    source: input.source,
     pageId: input.pageId,
     pageName: input.pageName,
+    accountRef: input.accountRef,
     tokenCipher: enc.cipher,
     tokenIv: enc.iv,
     tokenTag: enc.tag,
+    webhookSecret: input.webhookSecret,
     status: "connected" as const,
     updatedAt: new Date(),
   };
