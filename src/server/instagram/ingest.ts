@@ -4,7 +4,11 @@ import {
   getInstagramCredentialsByAccountRef,
   getInstagramCredentialsByIgUserId,
 } from "@/server/instagram/credentials";
-import { parseZernioEvent, type ZernioEvent } from "@/server/zernio";
+import {
+  parseZernioEvent,
+  zernioSentAtSeconds,
+  type ZernioEvent,
+} from "@/server/zernio";
 
 /**
  * 014 — Adaptadores de entrada del canal de Instagram.
@@ -76,8 +80,10 @@ export async function processZernioEvent(payload: unknown): Promise<void> {
   }
 
   const text = evt.message?.text ?? null;
-  const platformMessageId = evt.message?.id;
-  if (!platformMessageId) {
+  // Id de Zernio, no el de la plataforma (el payload trae los dos): es el
+  // que se mantiene entre reentregas, que es lo que hay que colapsar.
+  const zernioMessageId = evt.message?.id;
+  if (!zernioMessageId) {
     console.warn(`[ig] evento ${evt.id ?? "?"} sin id de mensaje: descartado`);
     return;
   }
@@ -97,10 +103,10 @@ export async function processZernioEvent(payload: unknown): Promise<void> {
     },
     // Prefijado para que no colisione jamas con un id de WhatsApp en el
     // indice unico de mensajes.
-    waMessageId: `ig_${platformMessageId}`,
+    waMessageId: `ig_${zernioMessageId}`,
     type: "text",
     text,
-    timestamp: String(Math.floor(Date.now() / 1000)),
+    timestamp: zernioSentAtSeconds(evt.message?.sentAt),
     threadRef: evt.message?.conversationId ?? null,
   });
 }

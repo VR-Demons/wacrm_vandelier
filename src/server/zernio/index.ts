@@ -54,15 +54,46 @@ export type ZernioEvent = {
   id?: string;
   event?: string;
   message?: {
+    /**
+     * Id de Zernio, NO el de la plataforma (ese viene en
+     * `platformMessageId`). Es el que dedupe: se mantiene entre reentregas
+     * del mismo mensaje, que es justo lo que hay que colapsar.
+     */
     id?: string;
+    platformMessageId?: string;
+    /**
+     * Identificador OPACO del hilo. La propia API dice «format not to be
+     * assumed»: su endpoint de respuesta lo acepta verbatim, ya venga del
+     * listado o de aquí. No se parsea ni se compara con el de la plataforma.
+     */
     conversationId?: string;
     direction?: string;
     text?: string | null;
+    /** Cuándo lo mandó la persona, ISO-8601. Ver `zernioSentAtSeconds`. */
+    sentAt?: string;
     attachments?: { type?: string; url?: string }[];
     sender?: { id?: string; name?: string | null; username?: string | null };
   };
   account?: { id?: string; platform?: string };
 };
+
+/**
+ * Hora del mensaje en segundos, la que trae el evento y no la de llegada.
+ *
+ * Importa porque `lastInboundAt` es lo que abre la ventana de 24 h: sellar con
+ * la hora de ingesta haría que una reentrega tardía —Zernio reintenta con
+ * backoff de hasta 24 h, y su panel permite reenviar a mano— pareciera un
+ * mensaje recién llegado, y el CRM ofrecería escribir libre por una ventana
+ * que en realidad ya se cerró. El envío lo rechazaría la plataforma, y el
+ * operador no tendría forma de entender por qué.
+ *
+ * Sin `sentAt` utilizable se cae a la hora actual: es lo que había antes y
+ * nunca es peor.
+ */
+export function zernioSentAtSeconds(sentAt: string | undefined): string {
+  const ms = sentAt ? Date.parse(sentAt) : NaN;
+  return String(Math.floor((Number.isFinite(ms) ? ms : Date.now()) / 1000));
+}
 
 /** Lee el cuerpo crudo como evento de Zernio; null si no lo es. */
 export function parseZernioEvent(rawBody: string): ZernioEvent | null {

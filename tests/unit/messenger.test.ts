@@ -9,7 +9,11 @@ import {
   normalizeZernioEvent,
 } from "@/server/messenger/ingest";
 import { buildMessengerSendBody } from "@/server/messenger/send";
-import { isValidZernioSignature, looksLikeMetaPayload } from "@/server/zernio";
+import {
+  isValidZernioSignature,
+  looksLikeMetaPayload,
+  zernioSentAtSeconds,
+} from "@/server/zernio";
 import { zernioTargetChannel } from "@/server/zernio/dispatch";
 import { createHmac } from "node:crypto";
 
@@ -273,6 +277,40 @@ describe("017 · firma de Zernio (control de seguridad compartido)", () => {
     expect(looksLikeMetaPayload({ object: "instagram" }, "page")).toBe(false);
     expect(looksLikeMetaPayload(zernioEvent(), "page")).toBe(false);
     expect(looksLikeMetaPayload(null, "page")).toBe(false);
+  });
+});
+
+describe("017 · la hora del mensaje sale del evento, no de la ingesta", () => {
+  it("usa `sentAt` cuando viene", () => {
+    // Importa porque `lastInboundAt` abre la ventana de 24 h: una reentrega
+    // tardía sellada con la hora de llegada haría creer que la ventana está
+    // abierta cuando la plataforma ya la cerró.
+    expect(zernioSentAtSeconds("2026-09-02T00:56:04.336Z")).toBe("1788310564");
+  });
+
+  it("un `sentAt` ausente o ilegible cae a la hora actual, nunca a NaN", () => {
+    const ahora = Math.floor(Date.now() / 1000);
+    for (const v of [undefined, "", "ayer por la tarde"]) {
+      const s = Number(zernioSentAtSeconds(v));
+      expect(Number.isFinite(s)).toBe(true);
+      expect(Math.abs(s - ahora)).toBeLessThan(5);
+    }
+  });
+
+  it("el normalizador lo propaga", () => {
+    const [evt] = normalizeZernioEvent(
+      zernioEvent({
+        message: {
+          id: "m1",
+          conversationId: "c1",
+          direction: "incoming",
+          text: "hola",
+          sentAt: "2026-09-02T00:56:04.336Z",
+          sender: { id: PSID, name: "Jane" },
+        },
+      })
+    );
+    expect(evt?.timestamp).toBe("1788310564");
   });
 });
 

@@ -7,7 +7,7 @@ import {
   getMessengerCredentialsByPageId,
 } from "@/server/messenger/credentials";
 import { fetchMessengerProfileName } from "@/server/messenger/send";
-import type { ZernioEvent } from "@/server/zernio";
+import { zernioSentAtSeconds, type ZernioEvent } from "@/server/zernio";
 
 /**
  * 017 — Adaptadores de entrada del canal de Messenger.
@@ -164,7 +164,7 @@ export function normalizeZernioEvent(payload: unknown): MessengerInbound[] {
       messageId,
       text,
       type,
-      timestamp: String(Math.floor(Date.now() / 1000)),
+      timestamp: zernioSentAtSeconds(evt.message?.sentAt),
       profileName:
         sender?.name?.trim() ||
         (sender?.username ? `@${sender.username}` : null),
