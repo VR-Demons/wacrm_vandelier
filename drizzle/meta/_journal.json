@@ -85,6 +85,13 @@
       "when": 1788309200954,
       "tag": "0011_canal_messenger",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1788310823966,
+      "tag": "0012_messenger_zernio",
+      "breakpoints": true
     }
   ]
 }

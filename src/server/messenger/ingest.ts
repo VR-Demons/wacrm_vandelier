@@ -2,36 +2,48 @@ import { and, eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { FB_PREFIX } from "@/server/inbox/identity";
 import { ingestInboundMessage } from "@/server/inbox/ingest";
-import { getMessengerCredentialsByPageId } from "@/server/messenger/credentials";
+import {
+  getMessengerCredentialsByAccountRef,
+  getMessengerCredentialsByPageId,
+} from "@/server/messenger/credentials";
 import { fetchMessengerProfileName } from "@/server/messenger/send";
+import { parseZernioEvent, type ZernioEvent } from "@/server/zernio";
 
 /**
- * 017 — Adaptador de entrada del canal de Messenger.
+ * 017 — Adaptadores de entrada del canal de Messenger.
  *
- * Meta manda los mensajes de la página con `object: "page"` y la misma forma
- * `entry[].messaging[]` que usa para Instagram. Aquí se normaliza a la forma
- * interna y de ahí en adelante corre el MISMO núcleo de ingesta que ya
- * resuelve contacto, conversación, idempotencia y bus de eventos (SSE).
+ * Dos fuentes con formatos que no se parecen: Meta manda los mensajes de la
+ * página con `object: "page"` y la forma `entry[].messaging[]`; Zernio manda un
+ * evento plano con `account`. Cada una se normaliza aquí y de ahí en adelante
+ * corre el MISMO núcleo de ingesta que ya resuelve contacto, conversación,
+ * idempotencia y bus de eventos (SSE).
  *
- * El normalizador es una función pura para poder probarla sin base de datos:
- * qué se ingiere y qué se descarta (echos, acuses, postbacks) es la parte que
- * más fácil se rompe cuando Meta cambia un campo.
+ * Los normalizadores son funciones puras para poder probarlos sin base de
+ * datos: qué se ingiere y qué se descarta (echos, acuses, postbacks, otra
+ * plataforma) es la parte que más fácil se rompe cuando el proveedor cambia un
+ * campo.
  */
 
 /** Un mensaje entrante ya en la forma que entiende el núcleo. */
 export type MessengerInbound = {
-  pageId: string;
+  /** Llave de enrutado: la página (Meta) o la cuenta de Zernio. */
+  routeKey: string;
   /** Page-Scoped ID del remitente: la identidad del contacto (`fb:<PSID>`). */
   psid: string;
-  mid: string;
+  /** Id del mensaje en la plataforma, para deduplicar. */
+  messageId: string;
   text: string | null;
   /** Tipo para la bandeja: text | image | video | audio | document | sticker | unsupported */
   type: string;
   /** Segundos desde epoch, como lo consume el núcleo. */
   timestamp: string;
+  /** Nombre del perfil si la fuente lo entrega (Zernio sí, Meta no). */
+  profileName: string | null;
+  /** Hilo en la plataforma de origen: hace falta para responder por Zernio. */
+  threadRef: string | null;
 };
 
-type MessengerPayload = {
+type MetaPagePayload = {
   object?: string;
   entry?: Array<{
     id?: string;
@@ -57,21 +69,24 @@ type MessengerPayload = {
 };
 
 /**
- * Tipos de adjunto de Messenger → tipo de mensaje del CRM. En la v1 el
- * adjunto no se descarga (Messenger lo entrega como URL temporal, no como id
- * de media): el mensaje entra con su tipo para que la bandeja enseñe
- * "📎 Imagen" en vez de perder el mensaje, y el operador sepa que hay algo
- * que ver en la app de la página.
+ * Tipos de adjunto → tipo de mensaje del CRM. En la v1 el adjunto no se
+ * descarga (ambas fuentes lo entregan como URL temporal, no como id de media):
+ * el mensaje entra con su tipo para que la bandeja enseñe "📎 Imagen" en vez
+ * de perder el mensaje, y el operador sepa que hay algo que ver.
  */
 const ATTACHMENT_TYPE: Record<string, string> = {
   image: "image",
   video: "video",
   audio: "audio",
   file: "document",
+  document: "document",
 };
 
-export function normalizeMessengerPayload(payload: unknown): MessengerInbound[] {
-  const body = payload as MessengerPayload | null;
+/** Plataformas con las que Zernio nombra a Messenger. */
+const ZERNIO_MESSENGER_PLATFORMS = new Set(["facebook", "messenger"]);
+
+export function normalizeMetaPagePayload(payload: unknown): MessengerInbound[] {
+  const body = payload as MetaPagePayload | null;
   if (!body || body.object !== "page") return [];
 
   const out: MessengerInbound[] = [];
@@ -94,23 +109,80 @@ export function normalizeMessengerPayload(payload: unknown): MessengerInbound[] 
 
       const text =
         typeof msg.text === "string" && msg.text.length > 0 ? msg.text : null;
-      const attachment = msg.attachments?.[0];
-      let type: string | null = text ? "text" : null;
-      if (!type && attachment) {
-        type = attachment.payload?.sticker_id
-          ? "sticker"
-          : (ATTACHMENT_TYPE[attachment.type ?? ""] ?? "unsupported");
-      }
+      const type = resolveType(text, msg.attachments?.[0]);
       if (!type) continue; // ni texto ni adjunto: no hay nada que ingerir
 
-      const seconds = m.timestamp
-        ? Math.floor(m.timestamp / 1000)
-        : Math.floor(Date.now() / 1000);
-
-      out.push({ pageId, psid, mid, text, type, timestamp: String(seconds) });
+      out.push({
+        routeKey: pageId,
+        psid,
+        messageId: mid,
+        text,
+        type,
+        timestamp: String(
+          m.timestamp ? Math.floor(m.timestamp / 1000) : Math.floor(Date.now() / 1000)
+        ),
+        // Meta no manda nombre ni usuario en el webhook: se consulta aparte.
+        profileName: null,
+        threadRef: null,
+      });
     }
   }
   return out;
+}
+
+/**
+ * Evento de Zernio. El MISMO webhook trae Instagram, WhatsApp y X si esas
+ * cuentas están conectadas: sin el filtro de plataforma acabaríamos ingiriendo
+ * otro canal como si fueran mensajes de la página.
+ */
+export function normalizeZernioEvent(payload: unknown): MessengerInbound[] {
+  const evt = payload as ZernioEvent | null;
+  if (!evt || typeof evt !== "object") return [];
+
+  const platform = (evt.account?.platform ?? "").toLowerCase();
+  if (!ZERNIO_MESSENGER_PLATFORMS.has(platform)) return [];
+  if (evt.event !== "message.received") return [];
+  if (evt.message?.direction && evt.message.direction !== "incoming") return [];
+
+  const accountRef = evt.account?.id;
+  const psid = evt.message?.sender?.id;
+  const messageId = evt.message?.id;
+  if (!accountRef || !psid || !messageId) return [];
+
+  const text =
+    typeof evt.message?.text === "string" && evt.message.text.length > 0
+      ? evt.message.text
+      : null;
+  const type = resolveType(text, evt.message?.attachments?.[0]);
+  if (!type) return [];
+
+  const sender = evt.message?.sender;
+  return [
+    {
+      routeKey: accountRef,
+      psid,
+      messageId,
+      text,
+      type,
+      timestamp: String(Math.floor(Date.now() / 1000)),
+      profileName:
+        sender?.name?.trim() ||
+        (sender?.username ? `@${sender.username}` : null),
+      // Opaco por contrato: se guarda tal cual y no se parsea. Es lo que hace
+      // falta para responder por Zernio.
+      threadRef: evt.message?.conversationId ?? null,
+    },
+  ];
+}
+
+function resolveType(
+  text: string | null,
+  attachment: { type?: string; payload?: { sticker_id?: number } } | undefined
+): string | null {
+  if (text) return "text";
+  if (!attachment) return null;
+  if (attachment.payload?.sticker_id) return "sticker";
+  return ATTACHMENT_TYPE[attachment.type ?? ""] ?? "unsupported";
 }
 
 async function contactExists(
@@ -131,24 +203,65 @@ async function contactExists(
   return rows.length > 0;
 }
 
-export async function processMessengerPayload(payload: unknown): Promise<void> {
-  for (const evt of normalizeMessengerPayload(payload)) {
-    const creds = await getMessengerCredentialsByPageId(evt.pageId);
+/** Resuelve el secreto de firma de la cuenta de Zernio ANTES de procesar. */
+export async function resolveZernioMessengerSecret(
+  rawBody: string
+): Promise<{ secret: string | null; accountRef: string | null }> {
+  const evt = parseZernioEvent(rawBody);
+  const accountRef = evt?.account?.id ?? null;
+  if (!accountRef) return { secret: null, accountRef: null };
+  const creds = await getMessengerCredentialsByAccountRef(accountRef);
+  return { secret: creds?.webhookSecret ?? null, accountRef };
+}
+
+export async function processMetaPagePayload(payload: unknown): Promise<void> {
+  await ingestAll(normalizeMetaPagePayload(payload), "meta");
+}
+
+export async function processZernioMessengerEvent(
+  payload: unknown
+): Promise<void> {
+  await ingestAll(normalizeZernioEvent(payload), "zernio");
+}
+
+async function ingestAll(
+  events: MessengerInbound[],
+  source: "zernio" | "meta"
+): Promise<void> {
+  for (const evt of events) {
+    const creds =
+      source === "meta"
+        ? await getMessengerCredentialsByPageId(evt.routeKey)
+        : await getMessengerCredentialsByAccountRef(evt.routeKey);
+
     if (!creds) {
       console.warn(
-        `[messenger] evento para una página desconocida (${evt.pageId}): ` +
+        `[messenger] evento para una cuenta desconocida (${evt.routeKey}): ` +
           "guarda la conexión en Configuración → Messenger para recibir mensajes"
+      );
+      continue;
+    }
+    if (creds.source !== source) {
+      // Defensa en profundidad: si esta instancia no habla con esa fuente, un
+      // payload con su forma no puede ser legítimo aunque llegue por la URL
+      // correcta. Sin esto, la única barrera de la forma ajena es la URL.
+      console.warn(
+        `[messenger] payload de ${source} en una instancia configurada como ` +
+          `'${creds.source}': descartado`
       );
       continue;
     }
 
     const identity = `${FB_PREFIX}${evt.psid}`;
-    // El nombre se consulta UNA vez, la primera que se ve al PSID: después el
+    // El nombre se resuelve UNA vez, la primera que se ve al PSID: después el
     // contacto ya existe y el nombre que tenga (o el que editó el operador)
-    // manda. Consultarlo en cada mensaje sería un viaje a Meta por renglón.
-    const profileName = (await contactExists(creds.organizationId, identity))
-      ? null
-      : await fetchMessengerProfileName(creds, evt.psid);
+    // manda. Consultarlo en cada mensaje sería un viaje al proveedor por
+    // renglón.
+    const profileName =
+      evt.profileName ??
+      ((await contactExists(creds.organizationId, identity))
+        ? null
+        : await fetchMessengerProfileName(creds, evt.psid));
 
     await ingestInboundMessage({
       organizationId: creds.organizationId,
@@ -161,11 +274,11 @@ export async function processMessengerPayload(payload: unknown): Promise<void> {
       },
       // Prefijado para que no colisione jamás con un id de WhatsApp ni de
       // Instagram en el índice único de mensajes.
-      waMessageId: `fb_${evt.mid}`,
+      waMessageId: `fb_${evt.messageId}`,
       type: evt.type,
       text: evt.text,
       timestamp: evt.timestamp,
-      threadRef: null,
+      threadRef: evt.threadRef,
     });
   }
 }

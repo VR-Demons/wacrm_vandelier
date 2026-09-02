@@ -4,18 +4,41 @@ import { FB_PREFIX, IG_PREFIX, BSUID_PREFIX } from "@/server/inbox/identity";
 import { capabilitiesFor, textFits, windowClosedMessage } from "@/server/channels/capabilities";
 import { parseChannels } from "@/server/channels/enabled";
 import { channelMark } from "@/components/channel-badge";
-import { normalizeMessengerPayload } from "@/server/messenger/ingest";
+import {
+  normalizeMetaPagePayload,
+  normalizeZernioEvent,
+} from "@/server/messenger/ingest";
 import { buildMessengerSendBody } from "@/server/messenger/send";
+import { isValidZernioSignature, looksLikeMetaPayload } from "@/server/zernio";
+import { createHmac } from "node:crypto";
 
 const PAGE = "1092837465";
 const PSID = "83719264018";
+const ACCOUNT = "665f1c2e8b3a4d0012345678";
 
 /** Un webhook de Meta con lo que trae de verdad: `object: "page"`. */
-function webhook(messaging: unknown[], overrides: Record<string, unknown> = {}) {
+function metaWebhook(messaging: unknown[], overrides: Record<string, unknown> = {}) {
   return {
     object: "page",
     entry: [{ id: PAGE, time: 1_770_000_000_000, messaging }],
     ...overrides,
+  };
+}
+
+/** Un evento de Zernio, con la forma de su documentación. */
+function zernioEvent(over: Record<string, unknown> = {}) {
+  return {
+    id: "5f8e2a1c-0000",
+    event: "message.received",
+    message: {
+      id: "665f0001",
+      conversationId: "664a0001",
+      direction: "incoming",
+      text: "Hola",
+      sender: { id: PSID, name: "Jane Doe", username: "jane_doe" },
+    },
+    account: { id: ACCOUNT, platform: "facebook" },
+    ...over,
   };
 }
 
@@ -52,10 +75,10 @@ describe("017 · Messenger en el catálogo de canales", () => {
   });
 });
 
-describe("017 · normalizeMessengerPayload (qué entra y qué se descarta)", () => {
+describe("017 · normalizeMetaPagePayload (qué entra y qué se descarta)", () => {
   it("un texto entra con su página, su PSID, su mid y su hora en segundos", () => {
-    const [evt, ...rest] = normalizeMessengerPayload(
-      webhook([
+    const [evt, ...rest] = normalizeMetaPagePayload(
+      metaWebhook([
         {
           sender: { id: PSID },
           recipient: { id: PAGE },
@@ -66,18 +89,20 @@ describe("017 · normalizeMessengerPayload (qué entra y qué se descarta)", () 
     );
     expect(rest).toHaveLength(0);
     expect(evt).toEqual({
-      pageId: PAGE,
+      routeKey: PAGE,
       psid: PSID,
-      mid: "m_abc",
+      messageId: "m_abc",
       text: "Hola, ¿tienen envíos?",
       type: "text",
       timestamp: "1770000123",
+      profileName: null,
+      threadRef: null,
     });
   });
 
   it("un adjunto sin texto entra con su tipo para que la bandeja enseñe qué llegó", () => {
-    const [img] = normalizeMessengerPayload(
-      webhook([
+    const [img] = normalizeMetaPagePayload(
+      metaWebhook([
         {
           sender: { id: PSID },
           message: {
@@ -90,13 +115,13 @@ describe("017 · normalizeMessengerPayload (qué entra y qué se descarta)", () 
     expect(img?.type).toBe("image");
     expect(img?.text).toBeNull();
 
-    const [doc] = normalizeMessengerPayload(
-      webhook([{ sender: { id: PSID }, message: { mid: "m_doc", attachments: [{ type: "file" }] } }])
+    const [doc] = normalizeMetaPagePayload(
+      metaWebhook([{ sender: { id: PSID }, message: { mid: "m_doc", attachments: [{ type: "file" }] } }])
     );
     expect(doc?.type).toBe("document");
 
-    const [sticker] = normalizeMessengerPayload(
-      webhook([
+    const [sticker] = normalizeMetaPagePayload(
+      metaWebhook([
         {
           sender: { id: PSID },
           message: { mid: "m_stk", attachments: [{ type: "image", payload: { sticker_id: 369239 } }] },
@@ -107,8 +132,8 @@ describe("017 · normalizeMessengerPayload (qué entra y qué se descarta)", () 
   });
 
   it("los echos (lo que mandó la página), los acuses y los postbacks NO son mensajes", () => {
-    const events = normalizeMessengerPayload(
-      webhook([
+    const events = normalizeMetaPagePayload(
+      metaWebhook([
         { sender: { id: PAGE }, recipient: { id: PSID }, message: { mid: "m_echo", text: "Gracias", is_echo: true } },
         { sender: { id: PSID }, delivery: { mids: ["m_1"], watermark: 1 } },
         { sender: { id: PSID }, read: { watermark: 1 } },
@@ -119,31 +144,138 @@ describe("017 · normalizeMessengerPayload (qué entra y qué se descarta)", () 
   });
 
   it("lo que no es un webhook de página se ignora entero", () => {
-    expect(normalizeMessengerPayload(webhook([{ sender: { id: PSID }, message: { mid: "m", text: "x" } }], { object: "instagram" }))).toEqual([]);
-    expect(normalizeMessengerPayload(null)).toEqual([]);
-    expect(normalizeMessengerPayload("basura")).toEqual([]);
-    expect(normalizeMessengerPayload({ object: "page" })).toEqual([]);
+    expect(
+      normalizeMetaPagePayload(metaWebhook([{ sender: { id: PSID }, message: { mid: "m", text: "x" } }], { object: "instagram" }))
+    ).toEqual([]);
+    expect(normalizeMetaPagePayload(null)).toEqual([]);
+    expect(normalizeMetaPagePayload("basura")).toEqual([]);
+    expect(normalizeMetaPagePayload({ object: "page" })).toEqual([]);
+    // Un evento de Zernio NO debe colarse por el normalizador de Meta.
+    expect(normalizeMetaPagePayload(zernioEvent())).toEqual([]);
   });
 
   it("sin remitente o sin mid no hay con qué identificar ni deduplicar: se descarta", () => {
     expect(
-      normalizeMessengerPayload(webhook([{ message: { mid: "m", text: "x" } }, { sender: { id: PSID }, message: { text: "x" } }]))
+      normalizeMetaPagePayload(metaWebhook([{ message: { mid: "m", text: "x" } }, { sender: { id: PSID }, message: { text: "x" } }]))
     ).toEqual([]);
   });
 
   it("varias entradas y varios mensajes se aplanan en orden", () => {
-    const events = normalizeMessengerPayload({
+    const events = normalizeMetaPagePayload({
       object: "page",
       entry: [
         { id: PAGE, messaging: [{ sender: { id: "a" }, message: { mid: "1", text: "uno" } }] },
         { id: "otra-pagina", messaging: [{ sender: { id: "b" }, message: { mid: "2", text: "dos" } }] },
       ],
     });
-    expect(events.map((e) => `${e.pageId}/${e.psid}/${e.mid}`)).toEqual([`${PAGE}/a/1`, "otra-pagina/b/2"]);
+    expect(events.map((e) => `${e.routeKey}/${e.psid}/${e.messageId}`)).toEqual([`${PAGE}/a/1`, "otra-pagina/b/2"]);
   });
 });
 
-describe("017 · buildMessengerSendBody", () => {
+describe("017 · normalizeZernioEvent (la fuente unificada)", () => {
+  it("un mensaje de Facebook entra con su cuenta, su PSID, su hilo y el nombre del perfil", () => {
+    const [evt] = normalizeZernioEvent(zernioEvent());
+    expect(evt?.routeKey).toBe(ACCOUNT);
+    expect(evt?.psid).toBe(PSID);
+    expect(evt?.messageId).toBe("665f0001");
+    expect(evt?.text).toBe("Hola");
+    expect(evt?.type).toBe("text");
+    // El conversationId es lo ÚNICO con lo que se puede responder por Zernio.
+    expect(evt?.threadRef).toBe("664a0001");
+    expect(evt?.profileName).toBe("Jane Doe");
+  });
+
+  it("sin nombre cae al usuario con arroba, que sigue siendo legible", () => {
+    const [evt] = normalizeZernioEvent(
+      zernioEvent({
+        message: {
+          id: "m1",
+          conversationId: "c1",
+          direction: "incoming",
+          text: "hola",
+          sender: { id: PSID, username: "jane_doe" },
+        },
+      })
+    );
+    expect(evt?.profileName).toBe("@jane_doe");
+  });
+
+  it("el MISMO webhook trae otras plataformas: solo se ingiere Facebook/Messenger", () => {
+    for (const platform of ["instagram", "whatsapp", "x", "tiktok", ""]) {
+      expect(
+        normalizeZernioEvent(zernioEvent({ account: { id: ACCOUNT, platform } }))
+      ).toEqual([]);
+    }
+    expect(
+      normalizeZernioEvent(zernioEvent({ account: { id: ACCOUNT, platform: "MESSENGER" } }))
+    ).toHaveLength(1);
+  });
+
+  it("solo `message.received` entrante: lo demás es ruido de la bandeja de Zernio", () => {
+    expect(normalizeZernioEvent(zernioEvent({ event: "message.sent" }))).toEqual([]);
+    expect(normalizeZernioEvent(zernioEvent({ event: "message.read" }))).toEqual([]);
+    expect(
+      normalizeZernioEvent(
+        zernioEvent({
+          message: { id: "m", conversationId: "c", direction: "outgoing", text: "x", sender: { id: PSID } },
+        })
+      )
+    ).toEqual([]);
+  });
+
+  it("sin cuenta, sin remitente o sin id de mensaje no se puede enrutar ni deduplicar", () => {
+    expect(normalizeZernioEvent(zernioEvent({ account: { platform: "facebook" } }))).toEqual([]);
+    expect(
+      normalizeZernioEvent(zernioEvent({ message: { id: "m", direction: "incoming", text: "x" } }))
+    ).toEqual([]);
+    expect(normalizeZernioEvent(null)).toEqual([]);
+    expect(normalizeZernioEvent({ object: "page" })).toEqual([]);
+  });
+
+  it("un adjunto de Zernio también entra con su tipo", () => {
+    const [evt] = normalizeZernioEvent(
+      zernioEvent({
+        message: {
+          id: "m_img",
+          conversationId: "c1",
+          direction: "incoming",
+          text: null,
+          attachments: [{ type: "image", url: "https://cdn/x.jpg" }],
+          sender: { id: PSID },
+        },
+      })
+    );
+    expect(evt?.type).toBe("image");
+    expect(evt?.text).toBeNull();
+  });
+});
+
+describe("017 · firma de Zernio (control de seguridad compartido)", () => {
+  const body = JSON.stringify(zernioEvent());
+  const secret = "s3cr3t0";
+  const good = createHmac("sha256", secret).update(body).digest("hex");
+
+  it("acepta la firma correcta y rechaza la que no lo es", () => {
+    expect(isValidZernioSignature(body, good, secret)).toBe(true);
+    expect(isValidZernioSignature(body, good.toUpperCase(), secret)).toBe(true);
+    expect(isValidZernioSignature(body, "deadbeef", secret)).toBe(false);
+    expect(isValidZernioSignature(body + " ", good, secret)).toBe(false);
+    expect(isValidZernioSignature(body, null, secret)).toBe(false);
+  });
+
+  it("sin secreto configurado la capa queda desactivada, como en WhatsApp", () => {
+    expect(isValidZernioSignature(body, null, null)).toBe(true);
+  });
+
+  it("distingue un payload de Meta de uno de Zernio", () => {
+    expect(looksLikeMetaPayload({ object: "page" }, "page")).toBe(true);
+    expect(looksLikeMetaPayload({ object: "instagram" }, "page")).toBe(false);
+    expect(looksLikeMetaPayload(zernioEvent(), "page")).toBe(false);
+    expect(looksLikeMetaPayload(null, "page")).toBe(false);
+  });
+});
+
+describe("017 · buildMessengerSendBody (transporte de Meta)", () => {
   it("dentro de la ventana es una RESPONSE normal", () => {
     expect(buildMessengerSendBody({ recipient: PSID, text: "Sí, a toda la ciudad", humanAgentTag: false })).toEqual({
       recipient: { id: PSID },

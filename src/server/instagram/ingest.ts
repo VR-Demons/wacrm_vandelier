@@ -1,10 +1,10 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { IG_PREFIX } from "@/server/inbox/identity";
 import { ingestInboundMessage } from "@/server/inbox/ingest";
 import {
   getInstagramCredentialsByAccountRef,
   getInstagramCredentialsByIgUserId,
 } from "@/server/instagram/credentials";
+import { parseZernioEvent, type ZernioEvent } from "@/server/zernio";
 
 /**
  * 014 — Adaptadores de entrada del canal de Instagram.
@@ -15,33 +15,12 @@ import {
  * resuelve contacto, conversación, idempotencia y bus de eventos.
  */
 
-/** Firma de Zernio: HMAC-SHA256 hex del cuerpo CRUDO, con el secreto. */
-export function isValidZernioSignature(
-  rawBody: string,
-  signature: string | null,
-  secret: string | null
-): boolean {
-  if (!secret) return true; // sin secreto configurado, protege la URL secreta
-  if (!signature) return false;
-  const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
-  const a = Buffer.from(expected, "utf8");
-  const b = Buffer.from(signature.trim().toLowerCase(), "utf8");
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(a, b);
-}
-
-type ZernioEvent = {
-  id?: string;
-  event?: string;
-  message?: {
-    id?: string;
-    conversationId?: string;
-    direction?: string;
-    text?: string | null;
-    sender?: { id?: string; name?: string | null; username?: string | null };
-  };
-  account?: { id?: string; platform?: string };
-};
+/**
+ * 017: la verificación de la firma vive en `server/zernio` porque la comparten
+ * todos los canales que entran por esa API. Se re-exporta para no tocar a
+ * quien ya la importaba de aquí.
+ */
+export { isValidZernioSignature } from "@/server/zernio";
 
 /**
  * Evento de Zernio. Devuelve el secreto esperado para poder validar la firma
@@ -51,12 +30,8 @@ type ZernioEvent = {
 export async function resolveZernioSecret(
   rawBody: string
 ): Promise<{ secret: string | null; accountRef: string | null }> {
-  let parsed: ZernioEvent | null = null;
-  try {
-    parsed = JSON.parse(rawBody) as ZernioEvent;
-  } catch {
-    return { secret: null, accountRef: null };
-  }
+  const parsed: ZernioEvent | null = parseZernioEvent(rawBody);
+  if (!parsed) return { secret: null, accountRef: null };
   const accountRef = parsed.account?.id ?? null;
   if (!accountRef) return { secret: null, accountRef: null };
   const creds = await getInstagramCredentialsByAccountRef(accountRef);

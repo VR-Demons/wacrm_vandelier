@@ -544,12 +544,24 @@ export const messengerCredentials = pgTable(
     organizationId: text("organization_id")
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
-    /** ID de la página de Facebook: por él enruta el webhook (`entry[].id`). */
-    pageId: text("page_id").notNull(),
+    /** De donde vienen los mensajes: API unificada o app propia de Meta. */
+    source: text("source", { enum: ["zernio", "meta"] })
+      .notNull()
+      .default("meta"),
+    /**
+     * ID de la página de Facebook: por él enruta el webhook de Meta
+     * (`entry[].id`). En modo Zernio puede no conocerse — ahí enruta
+     * `account_ref` — así que es opcional.
+     */
+    pageId: text("page_id"),
     pageName: text("page_name"),
+    /** Zernio: accountId de la cuenta conectada. Meta directo: null. */
+    accountRef: text("account_ref"),
     tokenCipher: text("token_cipher").notNull(),
     tokenIv: text("token_iv").notNull(),
     tokenTag: text("token_tag").notNull(),
+    /** Secreto HMAC de las entregas (Zernio); null en modo Meta. */
+    webhookSecret: text("webhook_secret"),
     status: text("status", { enum: ["connected", "reconnect_required"] })
       .notNull()
       .default("connected"),
@@ -559,6 +571,7 @@ export const messengerCredentials = pgTable(
   (t) => [
     uniqueIndex("messenger_credentials_org_uq").on(t.organizationId),
     uniqueIndex("messenger_credentials_page_uq").on(t.pageId),
+    index("messenger_credentials_account_ref_idx").on(t.accountRef),
   ]
 );
 
