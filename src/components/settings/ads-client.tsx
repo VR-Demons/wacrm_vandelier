@@ -259,7 +259,7 @@ export function AdsClient() {
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="text-left text-xs uppercase text-muted-foreground">
+                <thead className="kicker text-left">
                   <tr>
                     <th className="py-2 pr-3 font-medium">Evento</th>
                     <th className="py-2 pr-3 font-medium">Contacto</th>
