@@ -17,71 +17,70 @@
   :root {
     color-scheme: light;
 
-    /* Neutros: papel frío de la landing */
-    --bg: #ffffff;
-    --bg-subtle: #f6f8fc;
-    --bg-panel: #eef2f9;
-    --bg-hover: #e9eef8;
-    --text: #0a1730;
-    --text-2: #42506b;
-    --text-3: #8391aa;
-    --text-4: #aab4c8;
-    --border: #e8edf6;
-    --border-strong: #dde5f1;
+    /* Neutros: Light equivalent for Vandelier AI */
+    --bg: #f8fafc; /* Slate 50 */
+    --bg-subtle: #f1f5f9; /* Slate 100 */
+    --bg-panel: #ffffff; /* White */
+    --bg-hover: #e2e8f0; /* Slate 200 */
+    --text: #0f172a; /* Slate 900 */
+    --text-2: #334155; /* Slate 700 */
+    --text-3: #64748b; /* Slate 500 */
+    --text-4: #94a3b8; /* Slate 400 */
+    --border: #e2e8f0; /* Slate 200 */
+    --border-strong: #cbd5e1; /* Slate 300 */
 
-    /* Chat: el cliente entra en verde WhatsApp, el CRM contesta en el acento */
-    --chat-bg: #f6f8fc;
-    --bubble-in: #eaf7ef;
-    --bubble-in-border: #d7eede;
+    /* Chat: Adapting to Red theme */
+    --chat-bg: #f1f5f9;
+    --bubble-in: #ffffff;
+    --bubble-in-border: #e2e8f0;
     --bubble-out: var(--accent-tint);
     --bubble-out-border: var(--accent-soft);
     --bubble-out-text: var(--text);
 
-    /* Acento (default: azul Vocero; el white-label lo sobreescribe) */
-    --accent: #0d5bff;
-    --accent-hover: #0a4de6;
-    --accent-soft: #d3e2ff;
-    --accent-tint: #ebf1ff;
-    --accent-text: #0038d8;
+    /* Acento (Vandelier AI - Red) */
+    --accent: #ef4444; /* Red 500 */
+    --accent-hover: #dc2626; /* Red 600 */
+    --accent-soft: #fecaca; /* Red 200 */
+    --accent-tint: #fee2e2; /* Red 100 */
+    --accent-text: #b91c1c; /* Red 700 */
     --accent-fg: #ffffff;
-    /* Velo translúcido ENCIMA del acento (contadores dentro de un chip). */
     --accent-veil: rgba(255, 255, 255, 0.22);
     --bg-active: var(--accent-tint);
 
-    /* Estado: color puro + tríada (tint = fondo, soft = borde, text = tinta) */
-    --success: #1fb35b;
-    --success-tint: #e9f7ee;
-    --success-soft: #c9ebd6;
-    --success-text: #157a41;
+    /* Estado */
+    --success: #10b981; /* Emerald 500 */
+    --success-tint: #d1fae5;
+    --success-soft: #a7f3d0;
+    --success-text: #047857;
 
-    --warning: #f2a71b;
-    --warning-tint: #fef6e6;
-    --warning-soft: #f8e3b5;
-    --warning-text: #935f0b;
+    --warning: #f59e0b; /* Amber 500 */
+    --warning-tint: #fef3c7;
+    --warning-soft: #fde68a;
+    --warning-text: #b45309;
 
-    --danger: #d94a4a;
-    --danger-tint: #fdf0f0;
-    --danger-soft: #f5cccc;
-    --danger-text: #b73535;
+    --danger: #ef4444; /* Red 500 */
+    --danger-tint: #fee2e2;
+    --danger-soft: #fecaca;
+    --danger-text: #b91c1c;
     --danger-fg: #ffffff;
 
-    --info: #0d5bff;
-    --info-tint: #ebf1ff;
-    --info-soft: #d3e2ff;
-    --info-text: #0038d8;
+    --info: #a855f7; /* Purple 500 (Resaltado) */
+    --info-tint: #f3e8ff;
+    --info-soft: #e9d5ff;
+    --info-text: #7e22ce;
 
     /* Superficies auxiliares */
-    --overlay: rgba(4, 16, 46, 0.55);
+    --overlay: rgba(15, 23, 42, 0.55);
     --knob: #ffffff;
 
-    /* Radios y sombras (las de la landing, con tinte azul marino) */
+    /* Radios y sombras */
     --radius-sm: 9px;
     --radius: 12px;
     --radius-lg: 16px;
-    --shadow-sm: 0 1px 2px rgba(8, 27, 82, 0.06);
-    --shadow-md: 0 14px 40px -16px rgba(8, 27, 82, 0.16);
-    --shadow-pop: 0 30px 80px -20px rgba(8, 27, 82, 0.22),
-      0 8px 24px -12px rgba(8, 27, 82, 0.12);
+    --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --shadow-md: 0 14px 40px -16px rgba(15, 23, 42, 0.16);
+    --shadow-pop: 0 30px 80px -20px rgba(15, 23, 42, 0.22),
+      0 8px 24px -12px rgba(15, 23, 42, 0.12);
 
     /* Densidad de filas de conversación */
     --row-py: 11px;
@@ -90,63 +89,61 @@
   :root[data-theme="dark"] {
     color-scheme: dark;
 
-    /* Neutros: el azul marino de las secciones oscuras de la landing */
-    --bg: #0b1327;
-    --bg-subtle: #070e20;
-    --bg-panel: #111b36;
-    --bg-hover: #172346;
-    --text: #e8eefc;
-    --text-2: #a9b8dc;
-    --text-3: #7688b0;
-    --text-4: #55648a;
-    --border: #1a2748;
-    --border-strong: #26376a;
+    /* Neutros: Vandelier AI Dark Theme */
+    --bg: #020617; /* Slate 950 */
+    --bg-subtle: #0f172a; /* Slate 900 */
+    --bg-panel: #0f172a; /* Slate 900 */
+    --bg-hover: #1e293b; /* Slate 800 */
+    --text: #f8fafc; /* Slate 50 */
+    --text-2: #cbd5e1; /* Slate 300 */
+    --text-3: #94a3b8; /* Slate 400 */
+    --text-4: #64748b; /* Slate 500 */
+    --border: #1e293b; /* Slate 800 */
+    --border-strong: #334155; /* Slate 700 */
 
     /* Chat */
-    --chat-bg: #070e20;
-    --bubble-in: #0f2419;
-    --bubble-in-border: #1c3b2a;
+    --chat-bg: #020617;
+    --bubble-in: #0f172a;
+    --bubble-in-border: #1e293b;
 
-    /* Acento: respaldo con el azul Vocero ya aclarado para fondo oscuro; el
-       white-label lo recalcula (ver resolveAccentSet en lib/branding). */
-    --accent: #256bff;
-    --accent-hover: #4883ff;
-    --accent-soft: #122c64;
-    --accent-tint: #0e1e41;
-    --accent-text: #6294ff;
+    /* Acento: Vandelier AI Red */
+    --accent: #ef4444; /* Red 500 */
+    --accent-hover: #f87171; /* Red 400 */
+    --accent-soft: #7f1d1d; /* Red 900 */
+    --accent-tint: #450a0a; /* Red 950 */
+    --accent-text: #fca5a5; /* Red 300 */
     --accent-fg: #ffffff;
     --accent-veil: rgba(0, 0, 0, 0.22);
 
     /* Estado sobre fondo oscuro */
-    --success: #4fd07f;
-    --success-tint: #0f2418;
-    --success-soft: #1c3d29;
-    --success-text: #7fe0a3;
+    --success: #10b981; /* Emerald 500 */
+    --success-tint: #022c22;
+    --success-soft: #064e3b;
+    --success-text: #6ee7b7;
 
-    --warning: #f5b74a;
-    --warning-tint: #2a1f0c;
-    --warning-soft: #4a3714;
-    --warning-text: #f7c86f;
+    --warning: #f59e0b; /* Amber 500 */
+    --warning-tint: #451a03;
+    --warning-soft: #78350f;
+    --warning-text: #fcd34d;
 
-    --danger: #ef6b6b;
-    --danger-tint: #2a1216;
-    --danger-soft: #4a1f26;
-    --danger-text: #f59a9a;
+    --danger: #ef4444; /* Red 500 */
+    --danger-tint: #450a0a;
+    --danger-soft: #7f1d1d;
+    --danger-text: #fca5a5;
     --danger-fg: #1b0d10;
 
-    --info: #6a9dff;
-    --info-tint: #101c3a;
-    --info-soft: #1d3468;
-    --info-text: #9dbbff;
+    --info: #a855f7; /* Purple 500 */
+    --info-tint: #3b0764;
+    --info-soft: #581c87;
+    --info-text: #d8b4fe;
 
-    --overlay: rgba(2, 8, 24, 0.74);
-    --knob: #dfe6fa;
+    --overlay: rgba(2, 6, 23, 0.74);
+    --knob: #cbd5e1;
 
-    /* Sombras: sobre oscuro necesitan más negro para leerse */
-    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
-    --shadow-md: 0 14px 40px -16px rgba(0, 0, 0, 0.6);
-    --shadow-pop: 0 30px 80px -20px rgba(0, 0, 0, 0.75),
-      0 8px 24px -12px rgba(0, 0, 0, 0.5);
+    /* Sombras: glow styling mentioned in art_guide.md */
+    --shadow-sm: 0 1px 2px rgba(239, 68, 68, 0.1);
+    --shadow-md: 0 0 15px rgba(239, 68, 68, 0.1);
+    --shadow-pop: 0 0 30px rgba(239, 68, 68, 0.4);
   }
 }
 
