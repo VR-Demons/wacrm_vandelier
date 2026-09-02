@@ -33,7 +33,7 @@ export const THEME_LABELS: Record<ThemePreference, string> = {
 export function normalizeThemePreference(
   value: string | null | undefined
 ): ThemePreference {
-  return value === "dark" ? "dark" : "light";
+  return value === "light" ? "light" : "dark";
 }
 
 /** Siguiente valor del botón: Claro ⇄ Oscuro. */

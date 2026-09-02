@@ -1,0 +1,13 @@
+{
+  "login": {
+    "title": "Iniciar sesión",
+    "email": "Correo",
+    "password": "Contraseña",
+    "enter": "Entrar",
+    "entering": "Entrando…",
+    "error_429": "Demasiados intentos. Espera unos minutos.",
+    "error_invalid": "Correo o contraseña incorrectos.",
+    "new_here": "¿Primera vez aquí?",
+    "create_account": "Crear la cuenta inicial"
+  }
+}

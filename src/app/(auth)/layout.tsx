@@ -2,6 +2,7 @@ import { isVoceroName } from "@/lib/brand";
 import { DEFAULT_BRANDING } from "@/lib/branding";
 import { getBranding } from "@/server/branding";
 import { BrandLogo } from "@/components/brand-mark";
+import { ParticlesBackground } from "@/components/ui/ParticlesBackground";
 
 /**
  * Pantalla de entrada con la escenografía del hero de vocerocrm.com: papel
@@ -16,9 +17,7 @@ export default async function AuthLayout({
   const vocero = isVoceroName(branding.name);
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-subtle p-4">
-      <div className="brand-grid absolute inset-0" aria-hidden />
-      <div className="brand-glow brand-glow-a" aria-hidden />
-      <div className="brand-glow brand-glow-b" aria-hidden />
+      <ParticlesBackground />
 
       <div className="relative w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-4 text-center">

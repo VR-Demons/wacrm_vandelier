@@ -4,7 +4,9 @@ import { Archivo, IBM_Plex_Mono, Instrument_Serif } from "next/font/google";
 import { accentCssVariables, DEFAULT_BRANDING } from "@/lib/branding";
 import { faviconHref } from "@/lib/favicon";
 import { normalizeThemePreference, THEME_COOKIE } from "@/lib/theme";
+import { normalizeLanguagePreference, LANG_COOKIE } from "@/lib/i18n";
 import { getBranding } from "@/server/branding";
+import { LanguageProvider } from "@/components/LanguageProvider";
 import "./globals.css";
 
 // Las tres voces de la marca, las mismas de vocerocrm.com. next/font las
@@ -48,9 +50,12 @@ export default async function RootLayout({
   const theme = normalizeThemePreference(
     (await cookies()).get(THEME_COOKIE)?.value
   );
+  const lang = normalizeLanguagePreference(
+    (await cookies()).get(LANG_COOKIE)?.value
+  );
   return (
     <html
-      lang="es"
+      lang={lang}
       className={`${archivo.variable} ${instrumentSerif.variable} ${plexMono.variable}`}
       // La preferencia siempre es explícita: el tema viaja resuelto en el HTML
       // del servidor, así que no hay divergencia con el cliente ni parpadeo.
@@ -62,7 +67,11 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: accentCssVariables(branding.accent) }}
         />
       </head>
-      <body className="font-sans">{children}</body>
+      <body className="font-sans">
+        <LanguageProvider initialLang={lang}>
+          {children}
+        </LanguageProvider>
+      </body>
     </html>
   );
 }
