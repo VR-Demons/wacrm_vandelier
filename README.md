@@ -276,6 +276,51 @@ del cliente se conecta con el **override de callback por WABA**:
 > Graph** (botón "Sincronizar" en Configuración → Plantillas), así el modo
 > agencia ve las aprobaciones igual.
 
+## Canales opcionales: Instagram y Messenger
+
+WhatsApp es el canal por el que existe Vocero y siempre está encendido. Los
+demás viajan en el mismo código, **apagados por defecto** ([ADR-001](docs/adr-001-canales-opcionales.md)):
+una instancia que no los usa no ve pantallas, webhooks ni variables suyas.
+Se encienden con una variable de despliegue:
+
+```bash
+CHANNELS=whatsapp,instagram,messenger   # los que quieras; whatsapp siempre va
+```
+
+Con más de un canal encendido, la Bandeja enseña el distintivo de cada
+conversación y permite filtrar por canal. El contacto, el pipeline, la ficha
+y el agente son los mismos: un lead es un lead, escriba por donde escriba.
+
+### Messenger (página de Facebook)
+
+1. En [developers.facebook.com](https://developers.facebook.com) crea (o usa)
+   una app con el producto **Messenger** y genera el **token de acceso de la
+   página** con el permiso `pages_messaging`. Anota el **ID de la página**.
+2. En Vocero, **Configuración → Messenger**: pega el ID y el token y pulsa
+   *Probar y guardar*. Vocero valida el token contra Meta antes de guardarlo
+   (cifrado en reposo) y te enseña la URL del webhook.
+3. En la app de Meta, **Messenger → Webhooks**: objeto `page`, campo
+   `messages`, esa URL de callback y el token de verificación que enseña la
+   pantalla. Suscribe la página a la app.
+
+Desde ese momento, lo que la gente le escribe a la página entra a la bandeja
+como `Messenger`, con el nombre de su perfil, y lo que respondas desde Vocero
+(tú o el agente) llega a su chat. Fuera de la ventana de 24 h la respuesta sale
+con la etiqueta `HUMAN_AGENT` de Meta (hasta 7 días); no hay plantillas.
+Hoy el canal es de texto: los adjuntos que te manden se ven como
+«📎 Imagen» para que sepas que llegaron, y los adjuntos salientes no están.
+
+Sin App Review, la página solo recibe mensajes de cuentas con un rol en la
+app; para atender al público hay que aprobar `pages_messaging`.
+
+### Instagram (DMs del perfil profesional)
+
+Mismo modelo, con dos fuentes posibles: una app propia de Meta (perfil del
+negocio como tester) o [Zernio](https://zernio.com) como API unificada. La
+conexión se guarda por la API de ajustes (`PUT /api/settings/instagram`) y el
+webhook vive en `/api/webhooks/ig/<token>`. El detalle está en
+[`specs/014-canal-instagram`](specs/014-canal-instagram/spec.md).
+
 ## Configuración de la IA
 
 En las variables de la instancia:

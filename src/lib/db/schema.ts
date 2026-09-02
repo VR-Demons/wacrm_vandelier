@@ -120,7 +120,7 @@ export const contact = pgTable(
      * 014: canal por el que vive este contacto. Aditivo y con default: toda
      * fila existente sigue significando exactamente lo mismo.
      */
-    channel: text("channel", { enum: ["whatsapp", "instagram"] })
+    channel: text("channel", { enum: ["whatsapp", "instagram", "messenger"] })
       .notNull()
       .default("whatsapp"),
     /**
@@ -330,7 +330,7 @@ export const conversation = pgTable(
      * 014: canal de la conversacion. Denormalizado del contacto a proposito:
      * el ruteo de salida y el filtro de la bandeja lo leen en cada mensaje.
      */
-    channel: text("channel", { enum: ["whatsapp", "instagram"] })
+    channel: text("channel", { enum: ["whatsapp", "instagram", "messenger"] })
       .notNull()
       .default("whatsapp"),
     /**
@@ -528,6 +528,37 @@ export const instagramCredentials = pgTable(
     uniqueIndex("instagram_credentials_org_uq").on(t.organizationId),
     uniqueIndex("instagram_credentials_ig_user_uq").on(t.igUserId),
     index("instagram_credentials_account_ref_idx").on(t.accountRef),
+  ]
+);
+
+/**
+ * 017 — Credenciales del canal de Messenger: la página de Facebook y su token
+ * de acceso, cifrado con el mismo AES-256-GCM que los demás. Tabla propia y
+ * explícita, como la de Instagram: unas credenciales tienen forma fija y
+ * conocida, y esconderlas en un jsonb perdería el tipado y los índices.
+ */
+export const messengerCredentials = pgTable(
+  "messenger_credentials",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    /** ID de la página de Facebook: por él enruta el webhook (`entry[].id`). */
+    pageId: text("page_id").notNull(),
+    pageName: text("page_name"),
+    tokenCipher: text("token_cipher").notNull(),
+    tokenIv: text("token_iv").notNull(),
+    tokenTag: text("token_tag").notNull(),
+    status: text("status", { enum: ["connected", "reconnect_required"] })
+      .notNull()
+      .default("connected"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("messenger_credentials_org_uq").on(t.organizationId),
+    uniqueIndex("messenger_credentials_page_uq").on(t.pageId),
   ]
 );
 

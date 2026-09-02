@@ -90,6 +90,22 @@ export async function GET(req: Request, ctx: Params) {
     });
   }
 
+  // 017 — GET {psid}?fields=first_name,last_name → perfil de quien escribe
+  // por Messenger (la ingesta lo consulta la primera vez que ve un PSID).
+  const fields = new URL(req.url).searchParams.get("fields") ?? "";
+  if (path.length === 1 && fields.includes("first_name")) {
+    return Response.json({
+      id: path[0],
+      first_name: "Cliente",
+      last_name: "de Messenger",
+    });
+  }
+
+  // 017 — GET {pageId}?fields=id,name → validación de la página de Facebook
+  if (path.length === 1 && /(^|,)name(,|$)/.test(fields)) {
+    return Response.json({ id: path[0], name: "Página de prueba Vocero" });
+  }
+
   // GET {phoneNumberId}?fields=... → validación del wizard
   if (path.length === 1) {
     return Response.json({
