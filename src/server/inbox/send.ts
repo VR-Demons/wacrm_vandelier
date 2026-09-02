@@ -16,6 +16,13 @@ import {
   type InstagramCredentials,
 } from "@/server/instagram/credentials";
 import { sendInstagramText } from "@/server/instagram/send";
+import { FB_PREFIX } from "@/server/inbox/identity";
+import {
+  getMessengerCredentialsByOrg,
+  markMessengerReconnectRequired,
+  type MessengerCredentials,
+} from "@/server/messenger/credentials";
+import { sendMessengerText } from "@/server/messenger/send";
 import {
   capabilitiesFor,
   textFits,
@@ -58,6 +65,8 @@ type SendTarget = {
   recipient: string;
   /** 014: presente solo en conversaciones de Instagram. */
   instagram?: InstagramCredentials;
+  /** 017: presente solo en conversaciones de Messenger. */
+  messenger?: MessengerCredentials;
 };
 
 /**
@@ -127,6 +136,39 @@ async function prepareSend(
       credentials: null,
       recipient: igRecipient,
       instagram: igCreds,
+    };
+  }
+
+  // 017: Messenger, mismo trato que Instagram: transporte propio, ventana
+  // propia (con etiqueta fuera de ella) y sin plantillas.
+  if (row.conversation.channel === "messenger") {
+    if (!isChannelEnabled("messenger")) {
+      throw new SendError(
+        "not_connected",
+        "El canal de Messenger está desactivado en esta instancia"
+      );
+    }
+    const fbCreds = await getMessengerCredentialsByOrg(organizationId);
+    if (!fbCreds) {
+      throw new SendError(
+        "not_connected",
+        "No hay página de Facebook conectada"
+      );
+    }
+    if (fbCreds.status === "reconnect_required") {
+      throw new SendError(
+        "reconnect_required",
+        "El token de la página expiró: reconecta Messenger en Configuración"
+      );
+    }
+    const fbRecipient = row.contact.waIdentity.startsWith(FB_PREFIX)
+      ? row.contact.waIdentity.slice(FB_PREFIX.length)
+      : row.contact.waIdentity;
+    return {
+      conversation: row.conversation,
+      credentials: null,
+      recipient: fbRecipient,
+      messenger: fbCreds,
     };
   }
 
@@ -239,12 +281,14 @@ export async function sendText(input: {
 
   const waMessageId = target.instagram
     ? await callInstagramSend(target, input.text)
-    : await callGraphSend(credentials!, {
-        messaging_product: "whatsapp",
-        to: recipient,
-        type: "text",
-        text: { body: input.text },
-      });
+    : target.messenger
+      ? await callMessengerSend(target, input.text)
+      : await callGraphSend(credentials!, {
+          messaging_product: "whatsapp",
+          to: recipient,
+          type: "text",
+          text: { body: input.text },
+        });
 
   const messageId = await persistOutbound({
     organizationId: input.organizationId,
@@ -401,6 +445,14 @@ export async function sendStructured(
     input.conversationId,
     input.organizationId
   );
+  // Ubicaciones y contactos son mensajes de WhatsApp: en los demás canales no
+  // hay credenciales de WhatsApp que usar y Graph los rechazaría.
+  if (!credentials) {
+    throw new SendError(
+      "meta_error",
+      "Este canal no admite ubicaciones ni contactos; manda el texto"
+    );
+  }
 
   const payload =
     input.kind === "location"
@@ -413,7 +465,7 @@ export async function sendStructured(
           })),
         };
 
-  const waMessageId = await callGraphSend(credentials!, {
+  const waMessageId = await callGraphSend(credentials, {
     messaging_product: "whatsapp",
     to: recipient,
     ...payload,
@@ -523,6 +575,57 @@ async function callInstagramSend(
         throw new SendError(
           "meta_unavailable",
           "Instagram no está disponible en este momento; intenta de nuevo"
+        );
+      }
+      throw new SendError("meta_error", err.message);
+    }
+    throw err;
+  }
+}
+
+/**
+ * 017 — Envío por el canal de Messenger. Mismo vocabulario de SendError que
+ * WhatsApp e Instagram: la bandeja no aprende un idioma por plataforma.
+ */
+async function callMessengerSend(
+  target: SendTarget,
+  text: string
+): Promise<string> {
+  const creds = target.messenger!;
+
+  const caps = capabilitiesFor("messenger");
+  if (!textFits("messenger", text)) {
+    throw new SendError(
+      "meta_error",
+      `${caps.label} no acepta mensajes de más de ${caps.maxTextBytes} bytes: acorta el texto`
+    );
+  }
+
+  // Messenger no tiene plantillas: fuera de la ventana de 24 h la única vía
+  // es la etiqueta de agente humano (hasta 7 días).
+  const humanAgentTag = !isWindowOpen(target.conversation.lastInboundAt);
+
+  try {
+    const res = await sendMessengerText({
+      credentials: creds,
+      recipient: target.recipient,
+      text,
+      humanAgentTag,
+    });
+    return res.platformMessageId;
+  } catch (err) {
+    if (err instanceof MetaApiError) {
+      if (err.isAuthError) {
+        await markMessengerReconnectRequired(creds.organizationId);
+        throw new SendError(
+          "reconnect_required",
+          "El token de la página expiró o fue revocado: reconecta Messenger"
+        );
+      }
+      if (err.status === 0 || err.status >= 500) {
+        throw new SendError(
+          "meta_unavailable",
+          "Messenger no está disponible en este momento; intenta de nuevo"
         );
       }
       throw new SendError("meta_error", err.message);

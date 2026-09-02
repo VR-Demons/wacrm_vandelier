@@ -5,6 +5,7 @@ import { normalizeMx } from "@/lib/meta/client";
 import { publish } from "@/server/events/bus";
 import { getCredentialsByPhoneNumberId } from "@/server/whatsapp/credentials";
 import { ensureAssetAvailable } from "@/server/whatsapp/media";
+import type { Channel } from "@/lib/channels";
 import type {
   WebhookMediaPayload,
   WebhookMessage,
@@ -166,7 +167,7 @@ export async function getOrCreateContact(
 export async function getOrCreateConversation(
   organizationId: string,
   contactId: string,
-  opts?: { channel?: "whatsapp" | "instagram"; threadRef?: string | null }
+  opts?: { channel?: Channel; threadRef?: string | null }
 ) {
   const db = getDb();
   const inserted = await db
