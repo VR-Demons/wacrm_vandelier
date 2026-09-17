@@ -18,6 +18,9 @@ import { matchesHandoffIntent } from "@/server/ai/handoff";
 import { buildAgentSystemPrompt } from "@/server/ai/prompts";
 import { agendaEnabled } from "@/server/agenda/flag";
 import { bookSlot, offerSlots } from "@/server/agenda/agent";
+import { cobranzaEnabled } from "@/server/cobranza/flag";
+import { getDebtContext } from "@/server/cobranza/agent-context";
+import { markAsPaid, markAsWrongNumber, markAsResolved } from "@/server/cobranza/agent-actions";
 
 /**
  * Turno del agente (FR-021..FR-025).
@@ -152,10 +155,16 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
     .orderBy(asc(schema.pipelineStage.position));
 
   const agenda = agendaEnabled();
+  const cobranza = cobranzaEnabled();
+  let cobranzaDebt: any = null;
+  if (cobranza) {
+    cobranzaDebt = await getDebtContext(organizationId, conversation.contactId);
+  }
+
   const messages: ChatMessage[] = [
     {
       role: "system",
-      content: buildAgentSystemPrompt({ profile, kb, stages, agenda }),
+      content: buildAgentSystemPrompt({ profile, kb, stages, agenda, cobranzaDebt }),
     },
     ...history
       .filter((m) => m.text)
@@ -165,7 +174,7 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
       })),
   ];
 
-  const result = await chatJson(agentActionSchema(agenda), messages);
+  const result = await chatJson(agentActionSchema({ agenda, cobranza }), messages);
   if (!result.ok) {
     if (result.error === "not_configured") return;
     // Fallo persistente del proveedor o salida imposible → escalar (FR-022).
@@ -209,6 +218,22 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
         action = degradeAction(action);
       }
     }
+  }
+
+  if (action.action === "mark_paid") {
+    await markAsPaid(action.folio);
+    if (action.reply) await deliverReply(conversation, action.reply);
+    return;
+  }
+  if (action.action === "mark_wrong_number") {
+    await markAsWrongNumber(action.folio);
+    if (action.reply) await deliverReply(conversation, action.reply);
+    return;
+  }
+  if (action.action === "mark_resolved") {
+    await markAsResolved(action.folio);
+    if (action.reply) await deliverReply(conversation, action.reply);
+    return;
   }
 
   if (action.action === "move_stage") {

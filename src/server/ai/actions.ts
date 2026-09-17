@@ -47,16 +47,37 @@ const agendaActions = [
   }),
 ] as const;
 
+const cobranzaActions = [
+  z.object({
+    action: z.literal("mark_paid"),
+    folio: z.string().min(1),
+    reply: z.string().optional(),
+  }),
+  z.object({
+    action: z.literal("mark_wrong_number"),
+    folio: z.string().min(1),
+    reply: z.string().optional(),
+  }),
+  z.object({
+    action: z.literal("mark_resolved"),
+    folio: z.string().min(1),
+    reply: z.string().optional(),
+  }),
+] as const;
+
 export const AgentAction = z.discriminatedUnion("action", [
   ...baseActions,
   ...agendaActions,
+  ...cobranzaActions,
 ]);
 
 /** El esquema que se le exige al modelo en ESTE turno. */
-export function agentActionSchema(agenda: boolean) {
-  return agenda
-    ? AgentAction
-    : z.discriminatedUnion("action", [...baseActions]);
+export function agentActionSchema(opts: { agenda?: boolean; cobranza?: boolean } = {}) {
+  let allowed: any[] = [...baseActions];
+  if (opts.agenda) allowed.push(...agendaActions);
+  if (opts.cobranza) allowed.push(...cobranzaActions);
+  
+  return z.discriminatedUnion("action", allowed as any);
 }
 
 export type AgentActionType = z.infer<typeof AgentAction>;
@@ -80,9 +101,12 @@ export function degradeAction(action: AgentActionType): AgentActionType {
   if (
     action.action === "move_stage" ||
     action.action === "offer_slots" ||
-    action.action === "book_slot"
+    action.action === "book_slot" ||
+    action.action === "mark_paid" ||
+    action.action === "mark_wrong_number" ||
+    action.action === "mark_resolved"
   ) {
-    return action.reply
+    return ("reply" in action && action.reply)
       ? { action: "reply", text: action.reply }
       : { action: "none" };
   }

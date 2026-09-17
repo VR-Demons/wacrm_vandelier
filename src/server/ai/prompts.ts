@@ -31,9 +31,11 @@ export function buildAgentSystemPrompt(input: {
    * token en hablar de horarios: la agenda no existe aquí.
    */
   agenda?: boolean;
+  cobranzaDebt?: any;
 }): string {
-  const { profile } = input;
+  const { profile, cobranzaDebt } = input;
   const stageNames = input.stages.map((s) => s.name).join(" | ");
+  
   const agendaLines = input.agenda
     ? [
         '- {"action":"offer_slots","reply":"..."} — ofrecer horarios para agendar (reply es solo la frase de entrada; los horarios los pone el sistema).',
@@ -47,6 +49,26 @@ export function buildAgentSystemPrompt(input: {
         "- Si el cliente quiere CANCELAR una cita → handoff: esa decisión no es tuya.",
       ]
     : [];
+
+  const cobranzaLines = cobranzaDebt?.hasDebt
+    ? [
+        '- {"action":"mark_paid","folio":"<folio>","reply":"..."} — marcar una deuda como "ya pagué" (requiere revisión manual luego).',
+        '- {"action":"mark_wrong_number","folio":"<folio>","reply":"..."} — marcar que el teléfono es incorrecto o no conocen al deudor.',
+        '- {"action":"mark_resolved","folio":"<folio>","reply":"..."} — marcar una duda sobre cobranza como resuelta.',
+      ]
+    : [];
+  const cobranzaRules = cobranzaDebt?.hasDebt
+    ? [
+        "- Tienes información de cobranza del cliente. Revisa el CONTEXTO DE COBRANZA abajo.",
+        "- NUNCA menciones montos específicos ni saldos exactos por seguridad, a menos que el usuario se autentique o tú no tengas esa información. Si te preguntan cuánto deben, diles que pueden revisarlo en su portal o escala a un humano.",
+        "- Si el cliente indica que ya pagó, usa mark_paid.",
+        "- Si el cliente indica que el mensaje llegó a un número equivocado, usa mark_wrong_number.",
+      ]
+    : [];
+  const cobranzaContext = cobranzaDebt?.hasDebt
+    ? `CONTEXTO DE COBRANZA: El cliente tiene registros activos de cobranza.\n${JSON.stringify(cobranzaDebt.records, null, 2)}`
+    : null;
+
   return [
     `Eres "${profile.name}", el asistente de WhatsApp de este negocio. Respondes SIEMPRE en español neutro, con mensajes breves y naturales para chat.`,
     profile.tone ? `Tono: ${profile.tone}` : null,
@@ -55,6 +77,7 @@ export function buildAgentSystemPrompt(input: {
       ? `Reglas de escalado a humano:\n${profile.escalationRules}`
       : null,
     profile.greeting ? `Saludo sugerido para conversaciones nuevas: ${profile.greeting}` : null,
+    cobranzaContext,
     `CONOCIMIENTO DEL NEGOCIO (tu única fuente de verdad; si algo no está aquí, NO lo inventes — di que lo confirmarás con el equipo o escala):\n${renderKb(input.kb)}`,
     `Etapas del pipeline disponibles: ${stageNames}`,
     [
@@ -65,11 +88,13 @@ export function buildAgentSystemPrompt(input: {
       '- {"action":"move_stage","stage":"<nombre exacto de etapa>","reply":"..."} — mover el lead (reply opcional).',
       '- {"action":"handoff","reason":"...","farewell":"..."} — escalar a un humano (farewell opcional para despedirte).',
       ...agendaLines,
+      ...cobranzaLines,
       "Reglas duras:",
       "- Si el cliente pide hablar con una persona/humano/asesor → handoff.",
       "- Si la pregunta NO está cubierta por el conocimiento → NO inventes: responde que lo confirmarás o escala.",
       "- Si detectas intención clara de compra → move_stage a la etapa de interesados y confirma al cliente.",
       ...agendaRules,
+      ...cobranzaRules,
       "- JSON puro, sin markdown ni texto adicional.",
     ].join("\n"),
   ]
