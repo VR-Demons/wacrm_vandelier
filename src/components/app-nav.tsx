@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Banknote,
   CalendarDays,
   FlaskConical,
   Inbox,
@@ -45,6 +46,12 @@ const AGENDA_ITEM: NavItem = {
   icon: CalendarDays,
 };
 
+const COBRANZA_ITEM: NavItem = {
+  href: "/cobranza",
+  label: "Cobranza",
+  icon: Banknote,
+};
+
 /**
  * Un renglón del menú, como el `side-item` del mockup de la landing: texto
  * semibold, esquinas de 9px y, activo, lavado del acento con tinta azul.
@@ -65,6 +72,7 @@ export function AppNav({
   theme,
   commit,
   agenda = false,
+  cobranza = false,
   open = false,
   onClose,
 }: {
@@ -83,6 +91,7 @@ export function AppNav({
    * todavía debe ver la entrada igual.
    */
   agenda?: boolean;
+  cobranza?: boolean;
   /** Solo aplica por debajo de `lg`: en escritorio el lateral es fijo. */
   open?: boolean;
   onClose?: () => void;
@@ -111,11 +120,18 @@ export function AppNav({
 
   const sha = commit || BUILD_COMMIT;
   const settingsActive = pathname.startsWith("/settings");
-  // Citas va después de Pipeline: es el paso siguiente de un trato, no una
-  // sección aparte.
-  const items = agenda
-    ? [...NAV.slice(0, 2), AGENDA_ITEM, ...NAV.slice(2)]
-    : NAV;
+  
+  // Citas y Cobranza van después de Pipeline: es el paso siguiente de un trato, no una sección aparte.
+  let items = [...NAV];
+  
+  if (agenda) {
+    items.splice(2, 0, AGENDA_ITEM);
+  }
+  
+  if (cobranza) {
+    const insertIndex = agenda ? 3 : 2;
+    items.splice(insertIndex, 0, COBRANZA_ITEM);
+  }
 
   return (
     <aside

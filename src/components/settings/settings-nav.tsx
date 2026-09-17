@@ -16,6 +16,8 @@ const TABS: Tab[] = [
 /** 015 — "Agenda" solo existe si esta instancia encendió la bandera. */
 const AGENDA_TAB: Tab = { href: "/settings/calendar", label: "Agenda" };
 
+const COBRANZA_TAB: Tab = { href: "/settings/cobranza", label: "Cobranza" };
+
 /** 016 — Igual con "Anuncios" y la bandera ATRIBUCION. */
 const ADS_TAB: Tab = { href: "/settings/ads", label: "Anuncios" };
 
@@ -25,10 +27,12 @@ const MESSENGER_TAB: Tab = { href: "/settings/messenger", label: "Messenger" };
 export function SettingsNav({
   agenda = false,
   atribucion = false,
+  cobranza = false,
   messenger = false,
 }: {
   agenda?: boolean;
   atribucion?: boolean;
+  cobranza?: boolean;
   messenger?: boolean;
 }) {
   const pathname = usePathname();
@@ -40,6 +44,7 @@ export function SettingsNav({
     ...(messenger ? [MESSENGER_TAB] : []),
     ...TABS.slice(1),
     ...(agenda ? [AGENDA_TAB] : []),
+    ...(cobranza ? [COBRANZA_TAB] : []),
     ...(atribucion ? [ADS_TAB] : []),
   ];
   return (

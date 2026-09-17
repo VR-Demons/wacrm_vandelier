@@ -1,6 +1,7 @@
 import { SettingsNav } from "@/components/settings/settings-nav";
 import { agendaEnabled } from "@/server/agenda/flag";
 import { atribucionEnabled } from "@/server/attribution/flag";
+import { cobranzaEnabled } from "@/server/cobranza/flag";
 import { isChannelEnabled } from "@/server/channels/enabled";
 
 // La bandera se lee en cada petición: si esto se resolviera al construir, la
@@ -21,6 +22,7 @@ export default function SettingsLayout({
         <SettingsNav
           agenda={agendaEnabled()}
           atribucion={atribucionEnabled()}
+          cobranza={cobranzaEnabled()}
           messenger={isChannelEnabled("messenger")}
         />
         <div className="min-w-0 flex-1 overflow-y-auto p-4 sm:p-6">{children}</div>
