@@ -1020,3 +1020,120 @@ export const capiSettings = pgTable(
   },
   (t) => [uniqueIndex("capi_settings_org_uq").on(t.organizationId)]
 );
+
+/* ============================================================
+ * Cobranza
+ * ============================================================ */
+
+export const collectionRecord = pgTable(
+  "collection_record",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    contactId: text("contact_id")
+      .references(() => contact.id, { onDelete: "set null" }),
+    folio: text("folio").notNull(),
+    clientName: text("client_name").notNull(),
+    phone: text("phone"),
+    email: text("email"),
+    contactName: text("contact_name"),
+    rfc: text("rfc"),
+    personalidad: text("personalidad"),
+    product: text("product").notNull(),
+    dueDate: timestamp("due_date"),
+    totalAmount: integer("total_amount"),
+    lateAmount: integer("late_amount"),
+    paid: boolean("paid").notNull().default(false),
+    status: text("status", {
+      enum: ["active", "ya_pague", "wrong_number", "no_response", "resolved"],
+    }).notNull().default("active"),
+    lastContactedAt: timestamp("last_contacted_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("cr_org_idx").on(t.organizationId),
+    uniqueIndex("cr_org_folio_uq").on(t.organizationId, t.folio),
+  ]
+);
+
+export const collectionUpload = pgTable(
+  "collection_upload",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    fileName: text("file_name").notNull(),
+    uploadType: text("upload_type").notNull(),
+    productType: text("product_type"),
+    recordCount: integer("record_count").notNull(),
+    uploadedBy: text("uploaded_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  }
+);
+
+export const collectionRun = pgTable(
+  "collection_run",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    runType: text("run_type").notNull(),
+    triggeredBy: text("triggered_by").notNull(),
+    totalEligible: integer("total_eligible").notNull().default(0),
+    totalSent: integer("total_sent").notNull().default(0),
+    totalFailed: integer("total_failed").notNull().default(0),
+    startedAt: timestamp("started_at").notNull().defaultNow(),
+    finishedAt: timestamp("finished_at"),
+    status: text("status", { enum: ["running", "completed", "failed"] })
+      .notNull()
+      .default("running"),
+  }
+);
+
+export const collectionSendLog = pgTable(
+  "collection_send_log",
+  {
+    id: text("id").primaryKey(),
+    runId: text("run_id")
+      .notNull()
+      .references(() => collectionRun.id, { onDelete: "cascade" }),
+    recordId: text("record_id")
+      .notNull()
+      .references(() => collectionRecord.id, { onDelete: "cascade" }),
+    channel: text("channel").notNull(),
+    templateName: text("template_name"),
+    waMessageId: text("wa_message_id"),
+    status: text("status", {
+      enum: ["queued", "sent", "delivered", "read", "failed"],
+    })
+      .notNull()
+      .default("queued"),
+    error: text("error"),
+    sentAt: timestamp("sent_at").notNull().defaultNow(),
+  }
+);
+
+export const collectionWorkflowConfig = pgTable(
+  "collection_workflow_config",
+  {
+    organizationId: text("organization_id")
+      .primaryKey()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    active: boolean("active").notNull().default(false),
+    flowPreventivo: boolean("flow_preventivo").notNull().default(true),
+    flowPayday: boolean("flow_payday").notNull().default(true),
+    flowAtrasado: boolean("flow_atrasado").notNull().default(true),
+    flowEmail: boolean("flow_email").notNull().default(false),
+    templatePreventivo: text("template_preventivo"),
+    templatePayday: text("template_payday"),
+    templateAtrasado: text("template_atrasado"),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  }
+);

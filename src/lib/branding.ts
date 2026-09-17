@@ -132,7 +132,7 @@ function contrast(a: Rgb, b: Rgb): number {
 }
 
 /** Fondo de referencia del tema oscuro (debe seguir a `--bg` de globals.css). */
-const DARK_BG: Rgb = { r: 0x0b, g: 0x13, b: 0x27 };
+const DARK_BG: Rgb = { r: 0x02, g: 0x06, b: 0x17 };
 
 /**
  * Set completo para cualquier acento, según el tema.

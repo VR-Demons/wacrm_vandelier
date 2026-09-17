@@ -9,7 +9,7 @@ import {
   resolveAccentSet,
 } from "@/lib/branding";
 
-const DARK_BG = "#0b1327";
+const DARK_BG = "#020617";
 
 /** Contraste WCAG entre dos hex, para afirmar sobre legibilidad y no sobre
  *  valores concretos: lo que importa es que se LEA, no que dé cierto color. */

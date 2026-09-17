@@ -29,6 +29,11 @@ const prefixes = {
   adAttribution: "att",
   conversionEvent: "cve",
   capiSettings: "capi",
+  // ── Cobranza ──
+  cr: "cr",
+  cu: "cu",
+  crun: "crun",
+  csl: "csl",
 } as const;
 
 export type IdKind = keyof typeof prefixes;
