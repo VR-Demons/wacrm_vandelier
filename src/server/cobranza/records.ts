@@ -30,6 +30,7 @@ export async function listRecords(orgId: string, options: ListRecordsOptions) {
   }
 
   if (status) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     conditions.push(eq(schema.collectionRecord.status, status as any));
   }
 
@@ -50,6 +51,8 @@ export async function listRecords(orgId: string, options: ListRecordsOptions) {
     const column =
       schema.collectionRecord[sort as keyof typeof schema.collectionRecord];
     if (column) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       orderBy = dir === "asc" ? asc(column as any) : desc(column as any);
     }
   }

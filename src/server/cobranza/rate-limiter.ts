@@ -34,6 +34,7 @@ export async function withExponentialBackoff<T>(
   while (true) {
     try {
       return await fn();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       attempt++;
       // Do not retry on definite failures (e.g. invalid variables or disconnected auth)

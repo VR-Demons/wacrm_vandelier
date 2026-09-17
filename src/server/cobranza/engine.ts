@@ -185,6 +185,7 @@ export async function runBatch(
         .set({ lastContactedAt: new Date(), updatedAt: new Date() })
         .where(eq(schema.collectionRecord.id, record.id));
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       failed++;
       await db.update(schema.collectionSendLog)

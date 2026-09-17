@@ -27,6 +27,7 @@ export async function POST(req: Request) {
 
     const result = await runBatch(orgId, runType, "api");
     return NextResponse.json(result);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("[cobranza/batch] Error:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

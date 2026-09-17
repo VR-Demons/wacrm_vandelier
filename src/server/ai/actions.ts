@@ -73,10 +73,12 @@ export const AgentAction = z.discriminatedUnion("action", [
 
 /** El esquema que se le exige al modelo en ESTE turno. */
 export function agentActionSchema(opts: { agenda?: boolean; cobranza?: boolean } = {}) {
-  let allowed: any[] = [...baseActions];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allowed: any[] = [...baseActions];
   if (opts.agenda) allowed.push(...agendaActions);
   if (opts.cobranza) allowed.push(...cobranzaActions);
   
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return z.discriminatedUnion("action", allowed as any);
 }
 

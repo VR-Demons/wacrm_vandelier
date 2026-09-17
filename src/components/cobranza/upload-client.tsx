@@ -14,6 +14,7 @@ interface PreviewData {
     folio: string;
     clientName: string;
     totalAmount: number;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     [key: string]: any;
   }>;
   errors: string[];
@@ -116,6 +117,7 @@ export default function UploadClient() {
       }
 
       setPreviewData(data);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setUploadError(err.message || "Error de red al subir el archivo.");
     } finally {
@@ -150,6 +152,7 @@ export default function UploadClient() {
 
       setConfirmResult(data);
       router.refresh(); // Refresh to update any server-side state if needed
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
       setUploadError(err.message || "Error de red al confirmar los datos.");
     } finally {

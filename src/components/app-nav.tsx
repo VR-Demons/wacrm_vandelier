@@ -122,7 +122,7 @@ export function AppNav({
   const settingsActive = pathname.startsWith("/settings");
   
   // Citas y Cobranza van después de Pipeline: es el paso siguiente de un trato, no una sección aparte.
-  let items = [...NAV];
+  const items = [...NAV];
   
   if (agenda) {
     items.splice(2, 0, AGENDA_ITEM);

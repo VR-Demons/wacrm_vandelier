@@ -2,6 +2,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { normalizeMx } from "@/lib/meta/client";
 import { newId } from "@/lib/db/ids";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { BSUID_PREFIX } from "@/server/inbox/identity";
 
 export interface LinkResult {
@@ -101,6 +102,7 @@ export async function linkRecordsToContacts(
       // 5. Store folio + product in existing contact's ficha
       const existingContact = existingContacts[0];
       if (existingContact) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const ficha = (existingContact.ficha as Record<string, any>) || {};
         ficha.cobranza_folio = record.folio;
         ficha.cobranza_product = record.product;

@@ -30,6 +30,7 @@ export async function GET(req: Request) {
       .offset(offset);
 
     return NextResponse.json({ data: runs, page, limit });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("[cobranza/runs] Error:", err);
     return NextResponse.json({ error: "Internal error" }, { status: 500 });

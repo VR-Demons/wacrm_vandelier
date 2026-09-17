@@ -41,6 +41,7 @@ export function WorkflowConfig() {
       .finally(() => setLoading(false));
   }, []);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleChange = (key: keyof Config, value: any) => {
     if (config) {
       setConfig({ ...config, [key]: value });

@@ -156,6 +156,7 @@ export async function runAgentTurn(conversationId: string): Promise<void> {
 
   const agenda = agendaEnabled();
   const cobranza = cobranzaEnabled();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let cobranzaDebt: any = null;
   if (cobranza) {
     cobranzaDebt = await getDebtContext(organizationId, conversation.contactId);

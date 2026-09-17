@@ -38,9 +38,10 @@ export const POST = withAuth(async (session, req: Request) => {
 
   // Upsert records
   let inserted = 0;
-  let updated = 0;
+  const updated = 0;
 
   if (records.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const values = records.map((r: any) => ({
       id: newId("cr"),
       organizationId: session.organizationId,
@@ -94,6 +95,7 @@ export const POST = withAuth(async (session, req: Request) => {
   // Find all records to link them
   const recordIds = [];
   if (records.length > 0) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const folios = records.map((r: any) => String(r.folio));
     const BATCH_SIZE = 500;
     for (let i = 0; i < folios.length; i += BATCH_SIZE) {

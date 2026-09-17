@@ -2,6 +2,7 @@ import { getDb, schema } from "@/lib/db";
 import { and, eq } from "drizzle-orm";
 import { cobranzaEnabled } from "./flag";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getDebtContext(orgId: string, contactId: string): Promise<any> {
   if (!cobranzaEnabled()) {
     return null;

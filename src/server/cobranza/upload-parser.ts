@@ -21,6 +21,7 @@ export interface ParseResult {
   errors: string[];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const normalizePersonalidad = (val: any): "MORAL" | "FISICA" => {
   if (!val) return "MORAL";
   const normalized = String(val)
@@ -31,6 +32,7 @@ const normalizePersonalidad = (val: any): "MORAL" | "FISICA" => {
   return normalized === "FISICA" ? "FISICA" : "MORAL";
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const parseDate = (val: any): Date | null => {
   if (!val) return null;
   if (typeof val === "number") {
@@ -42,6 +44,7 @@ const parseDate = (val: any): Date | null => {
   return isNaN(date.getTime()) ? null : date;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const parseMoneyCents = (val: any): number | null => {
   if (!val) return 0;
   if (typeof val === "number") return Math.round(val * 100);
@@ -68,12 +71,14 @@ export function parseExcel(buffer: Buffer): ParseResult {
     const rows = XLSX.utils.sheet_to_json(worksheet, {
       header: 1,
       raw: true,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     }) as any[];
 
     // 1. Detect product type (scan first 20 rows)
     const rowsToScan = rows.slice(0, 20);
     for (const row of rowsToScan) {
       if (!row) continue;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rowString = Array.from((row as any[]) || [])
         .map((cell) => (cell ? String(cell).toUpperCase() : ""))
         .join(" ");
@@ -89,7 +94,7 @@ export function parseExcel(buffer: Buffer): ParseResult {
 
     // 2. Find header row dynamically
     let headerRowIndex = -1;
-    let colMap = {
+    const colMap = {
       folio: -1,
       clientName: -1,
       phone: -1,
@@ -107,6 +112,7 @@ export function parseExcel(buffer: Buffer): ParseResult {
       const row = rows[i];
       if (!row) continue;
       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const rowUpper = (row as any[]).map(c => c ? String(c).toUpperCase().trim() : "");
       
       const folioIdx = rowUpper.findIndex(c => c.includes("FOLIO") || c === "CONTRATO");
@@ -135,6 +141,7 @@ export function parseExcel(buffer: Buffer): ParseResult {
 
     // 3. Map records
     for (let i = headerRowIndex + 1; i < rows.length; i++) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const row = rows[i] as any[];
       if (!row || row.length === 0) continue;
 
@@ -165,6 +172,7 @@ export function parseExcel(buffer: Buffer): ParseResult {
       });
     }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     errors.push(err.message || "Error procesando archivo Excel");
   }

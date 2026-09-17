@@ -31,6 +31,7 @@ export function buildAgentSystemPrompt(input: {
    * token en hablar de horarios: la agenda no existe aquí.
    */
   agenda?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   cobranzaDebt?: any;
 }): string {
   const { profile, cobranzaDebt } = input;

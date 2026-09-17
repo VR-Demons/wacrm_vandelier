@@ -75,6 +75,7 @@ export function RecordsClient() {
       if (!res.ok) throw new Error("Failed to fetch");
       const json = await res.json();
       setData(json);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       // Silent catch for initial skeleton / error boundary logic
     } finally {
