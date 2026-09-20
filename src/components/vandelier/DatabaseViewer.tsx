@@ -100,7 +100,7 @@ export function DatabaseViewer({ refreshTrigger }: DatabaseViewerProps) {
   }, [data, searchTerm]);
 
   const sortedData = useMemo(() => {
-    let sortableItems = [...filteredData];
+    const sortableItems = [...filteredData];
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
         const aVal = a[sortConfig.key] || "";
