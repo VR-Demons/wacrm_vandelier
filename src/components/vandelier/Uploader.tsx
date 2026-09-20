@@ -31,13 +31,18 @@ export function Uploader({ onUploadSuccess }: UploaderProps) {
     setIsDragging(false);
     setError(null);
     const droppedFile = e.dataTransfer.files[0];
-    validateAndSetFile(droppedFile);
+    if (droppedFile) {
+      validateAndSetFile(droppedFile);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null);
     if (e.target.files && e.target.files.length > 0) {
-      validateAndSetFile(e.target.files[0]);
+      const selectedFile = e.target.files[0];
+      if (selectedFile) {
+        validateAndSetFile(selectedFile);
+      }
     }
   };
 

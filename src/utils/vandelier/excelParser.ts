@@ -17,7 +17,15 @@ export const parseExcelFile = async (file: File): Promise<BackendRow[]> => {
 
         // Grab the first sheet
         const firstSheetName = workbook.SheetNames[0];
+        if (!firstSheetName) {
+          resolve([]);
+          return;
+        }
         const worksheet = workbook.Sheets[firstSheetName];
+        if (!worksheet) {
+          resolve([]);
+          return;
+        }
 
         // Convert to JSON array
         const rawJson: any[] = xlsx.utils.sheet_to_json(worksheet, { defval: '' });
