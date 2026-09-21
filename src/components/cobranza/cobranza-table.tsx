@@ -3,7 +3,6 @@ import { Search, ChevronsUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UseTableStateProps } from "./use-table-state";
 
 export interface ColumnDef<T> {
   header: string;
@@ -14,7 +13,6 @@ export interface ColumnDef<T> {
 
 export interface CobranzaTableProps<T> {
   columns: ColumnDef<T>[];
-  data: T[];
   tableState: ReturnType<typeof import("./use-table-state").useTableState<T>>;
   isLoading?: boolean;
   emptyMessage?: string;
@@ -23,7 +21,6 @@ export interface CobranzaTableProps<T> {
 
 export function CobranzaTable<T extends { id: string | number }>({
   columns,
-  data,
   tableState,
   isLoading,
   emptyMessage = "No se encontraron resultados",
@@ -41,7 +38,6 @@ export function CobranzaTable<T extends { id: string | number }>({
     totalRecords,
     paginatedData,
     editingRowId,
-    setEditingRowId,
   } = tableState;
 
   return (

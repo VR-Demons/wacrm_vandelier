@@ -75,7 +75,7 @@ export function LatePaymentsUploader({ data }: { data: LatePaymentRecord[] }) {
         <h2 className="text-xl font-bold text-red-800">Carga de Pagos Atrasados (Late)</h2>
         <p className="text-muted-foreground text-sm">Previsualización de morosidad y vencidos.</p>
       </div>
-      <CobranzaTable columns={columns} data={data} tableState={tableState} />
+      <CobranzaTable columns={columns} tableState={tableState} />
     </div>
   );
 }

@@ -72,7 +72,7 @@ export function DuePaymentsUploader({ data }: { data: DuePaymentRecord[] }) {
         <h2 className="text-xl font-bold">Carga de Pagos Regulares (Due)</h2>
         <p className="text-muted-foreground text-sm">Previsualización de arrendamientos en tiempo.</p>
       </div>
-      <CobranzaTable columns={columns} data={data} tableState={tableState} />
+      <CobranzaTable columns={columns} tableState={tableState} />
     </div>
   );
 }

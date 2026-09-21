@@ -4,6 +4,8 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, FileType, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { DuePaymentsUploader } from "./due-payments-uploader";
+import { LatePaymentsUploader } from "./late-payments-uploader";
 
 type UploadType = "due" | "late";
 
@@ -360,41 +362,10 @@ export default function UploadClient() {
           )}
 
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Folio
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Cliente
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
-                    Monto Total
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {previewData.records.slice(0, 10).map((record, idx) => (
-                  <tr key={idx}>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                      {record.folio}
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                      {record.clientName || record.cliente}
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium text-gray-900">
-                      {formatCurrency(record.totalAmount)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            
-            {previewData.records.length > 10 && (
-              <div className="bg-gray-50 px-6 py-3 text-center text-sm text-gray-500">
-                Mostrando 10 de {previewData.records.length} registros
-              </div>
+            {uploadType === "due" ? (
+              <DuePaymentsUploader data={previewData.records.map((r, i) => ({ id: String(i), folio: r.folio, clientName: r.clientName || r.cliente || "-", phone: r.phone || r.telefono || "-", totalAmount: r.totalAmount, dueDate: r.dueDate || "-" }))} />
+            ) : (
+              <LatePaymentsUploader data={previewData.records.map((r, i) => ({ id: String(i), folio: r.folio, clientName: r.clientName || r.cliente || "-", phone: r.phone || r.telefono || "-", totalAmount: r.totalAmount, daysLate: r.daysLate || 0 }))} />
             )}
           </div>
 

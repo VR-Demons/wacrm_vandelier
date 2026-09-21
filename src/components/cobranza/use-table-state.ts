@@ -13,6 +13,7 @@ export interface UseTableStateProps<T> {
   searchableColumns?: (keyof T)[];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useTableState<T extends Record<string, any>>({
   data,
   initialPageSize = 10,

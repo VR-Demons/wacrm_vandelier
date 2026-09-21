@@ -192,7 +192,7 @@ export function DatabaseViewer({ initialData }: { initialData: DatabaseRecord[] 
 
   return (
     <div className="h-[700px] p-6">
-      <CobranzaTable columns={columns} data={data} tableState={tableState} />
+      <CobranzaTable columns={columns} tableState={tableState} />
     </div>
   );
 }
