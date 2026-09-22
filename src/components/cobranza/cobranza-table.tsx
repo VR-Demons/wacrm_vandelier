@@ -1,17 +1,18 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { ReactNode } from "react";
 import { Search, ChevronsUpDown, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export interface ColumnDef<T> {
+export interface ColumnDef<T extends Record<string, any>> {
   header: string;
   accessorKey?: keyof T;
   cell?: (row: T, isEditing: boolean) => ReactNode;
   sortable?: boolean;
 }
 
-export interface CobranzaTableProps<T> {
+export interface CobranzaTableProps<T extends Record<string, any>> {
   columns: ColumnDef<T>[];
   tableState: ReturnType<typeof import("./use-table-state").useTableState<T>>;
   isLoading?: boolean;
@@ -19,7 +20,7 @@ export interface CobranzaTableProps<T> {
   onEditSave?: (row: T, newValues: Partial<T>) => void;
 }
 
-export function CobranzaTable<T extends { id: string | number }>({
+export function CobranzaTable<T extends Record<string, any> & { id: string | number }>({
   columns,
   tableState,
   isLoading,
