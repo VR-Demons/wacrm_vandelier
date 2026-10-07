@@ -29,6 +29,8 @@ const prefixes = {
   adAttribution: "att",
   conversionEvent: "cve",
   capiSettings: "capi",
+  // folios extendidos
+  contactFolio: "cfl",
 } as const;
 
 export type IdKind = keyof typeof prefixes;

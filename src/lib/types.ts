@@ -109,6 +109,13 @@ export type FichaValue = string | number | boolean;
  */
 export type FichaDto = Record<string, FichaValue>;
 
+export type ContactFolioSummaryDto = {
+  id: string;
+  folio: number;
+  fechaExigibilidad: string | null;
+  producto: string | null;
+};
+
 export type ContactDto = {
   id: string;
   name: string;
@@ -124,6 +131,8 @@ export type ContactDto = {
   priority?: PriorityValue | null;
   /** Lo que se sabe del lead. `{}` mientras nadie haya calificado. */
   ficha?: FichaDto;
+  /** Resumen de folios de cartera vinculados. */
+  folios?: ContactFolioSummaryDto[];
 };
 
 /* ============================================================

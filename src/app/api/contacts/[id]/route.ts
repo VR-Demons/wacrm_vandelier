@@ -14,6 +14,7 @@ import {
   anuncioDelContacto,
   repararImagenSiFalta,
 } from "@/server/attribution/store";
+import { getFoliosForContact, serializeFolioSummary } from "@/server/folios";
 
 export const dynamic = "force-dynamic";
 
@@ -23,16 +24,26 @@ export const GET = withAuth(async (session, _req: Request, ctx: Params) => {
   const { id } = await ctx.params;
   const contact = await getContactById(session.organizationId, id);
   if (!contact) return apiError(404, "not_found", "Contacto no encontrado");
-  const [stageRow, anuncio] = await Promise.all([
+  const [stageRow, anuncio, foliosRows] = await Promise.all([
     getContactStage(session.organizationId, id),
     anuncioDelContacto(session.organizationId, id),
+    getFoliosForContact(session.organizationId, id),
   ]);
   // 018 — Sin imagen todavía: se reintenta en segundo plano y llega por SSE.
   if (anuncio && !anuncio.imageAssetId) {
     repararImagenSiFalta(session.organizationId, id);
   }
+  const folios = foliosRows.map(serializeFolioSummary);
+  const serializedContact = serializeContact(
+    contact,
+    null,
+    null,
+    cuentaComoAnuncio(anuncio),
+    folios
+  );
+
   return Response.json({
-    contact: serializeContact(contact, null, null, cuentaComoAnuncio(anuncio)),
+    contact: serializedContact,
     // 018 — de qué anuncio llegó, o null si escribió por su cuenta.
     anuncio,
     stage: stageRow
@@ -44,6 +55,7 @@ export const GET = withAuth(async (session, _req: Request, ctx: Params) => {
         }
       : null,
     lead: stageRow ? { id: stageRow.lead.id } : null,
+    folios,
   });
 });
 

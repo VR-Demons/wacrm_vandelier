@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Archive,
   ArchiveRestore,
+  Hash,
   MessageSquareText,
   Search,
   Send,
@@ -24,6 +25,7 @@ import { priorityRank } from "@/server/leads/priority";
 import { PriorityBadge } from "@/components/pipeline/priority-picker";
 import { NewContactDialog } from "./new-contact-dialog";
 import { StartConversation } from "./start-conversation";
+import { ContactFoliosList } from "./contact-folios";
 
 export function ContactsClient() {
   const router = useRouter();
@@ -36,6 +38,7 @@ export function ContactsClient() {
   const [deleting, setDeleting] = useState<ContactDto | null>(null);
   const [creando, setCreando] = useState(false);
   const [escribiendo, setEscribiendo] = useState<ContactDto | null>(null);
+  const [viewingFolios, setViewingFolios] = useState<ContactDto | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Mismo rescate que en la Bandeja: lo tecleado antes de que hidrate el JS
@@ -193,6 +196,17 @@ export function ContactsClient() {
                         {SOURCE_LABELS[c.source.value]}
                       </Badge>
                     )}
+                    {c.folios && c.folios.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setViewingFolios(c)}
+                        className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-0.5 text-[11px] font-medium text-secondary-foreground hover:bg-secondary/80 cursor-pointer transition-colors"
+                        title="Ver folios de cartera"
+                      >
+                        <Hash className="h-3 w-3" />
+                        {c.folios.length} {c.folios.length === 1 ? "folio" : "folios"}
+                      </button>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {formatPhone(c.phone)}
@@ -259,6 +273,13 @@ export function ContactsClient() {
             await patch(editing.id, patchBody);
             setEditing(null);
           }}
+        />
+      )}
+
+      {viewingFolios && (
+        <FoliosDialog
+          contact={viewingFolios}
+          onClose={() => setViewingFolios(null)}
         />
       )}
 
@@ -399,3 +420,47 @@ function EditDialog({
     </div>
   );
 }
+
+function FoliosDialog({
+  contact,
+  onClose,
+}: {
+  contact: ContactDto;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Folios de Cartera"
+    >
+      <div className="w-full max-w-md rounded-lg border bg-popover p-5 shadow-xl">
+        <div className="mb-4 flex items-center justify-between border-b pb-3">
+          <div>
+            <h3 className="font-semibold text-foreground">
+              Folios de Cartera · {contact.name}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {formatPhone(contact.phone)}
+            </p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            ✕
+          </Button>
+        </div>
+
+        <div className="max-h-80 overflow-y-auto py-1">
+          <ContactFoliosList folios={contact.folios ?? []} />
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Cerrar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+

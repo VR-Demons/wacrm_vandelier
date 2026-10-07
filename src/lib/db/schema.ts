@@ -4,6 +4,7 @@ import {
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   text,
   timestamp,
@@ -191,6 +192,40 @@ export const contact = pgTable(
     ),
     index("contact_org_wa_user_id_idx").on(t.organizationId, t.waUserId),
     index("contact_org_name_idx").on(t.organizationId, t.name),
+  ]
+);
+
+export const contactFolio = pgTable(
+  "contact_folio",
+  {
+    id: text("id").primaryKey(),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    folio: integer("folio").notNull(),
+    contactId: text("contact_id")
+      .references(() => contact.id, { onDelete: "cascade" }),
+    phone: text("phone").notNull(),
+    rawPhone: text("raw_phone"),
+    cliente: text("cliente"),
+    fechaExigibilidad: timestamp("fecha_exigibilidad", { withTimezone: true }),
+    producto: text("producto"),
+    total: numeric("total", { precision: 14, scale: 2 }),
+    pagado: boolean("pagado").notNull().default(false),
+    mora: numeric("mora", { precision: 14, scale: 2 }).default("0"),
+    correo: text("correo"),
+    contacto: text("contacto"),
+    rfc: text("rfc"),
+    personalidad: text("personalidad"),
+    externalId: integer("external_id"),
+    rawPayload: jsonb("raw_payload").$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("contact_folio_org_folio_uq").on(t.organizationId, t.folio),
+    index("contact_folio_org_phone_idx").on(t.organizationId, t.phone),
+    index("contact_folio_org_contact_id_idx").on(t.organizationId, t.contactId),
   ]
 );
 

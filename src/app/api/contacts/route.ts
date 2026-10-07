@@ -8,6 +8,7 @@ import { normalizeMx } from "@/lib/meta/client";
 import { digitsOnly, normalizeText } from "@/lib/search";
 import { serializeContact } from "@/server/contacts";
 import { createLeadForContact } from "@/server/inbox/lead-activity";
+import { getFoliosGroupedByContact } from "@/server/folios";
 
 export const dynamic = "force-dynamic";
 
@@ -88,15 +89,21 @@ export const GET = withAuth(async (session, req: Request) => {
     .orderBy(desc(schema.contact.updatedAt))
     .limit(200);
 
-  const contacts = rows
-    .filter((c) => includeArchived || !c.archivedAt)
-    .map((c) =>
-      serializeContact(
-        c,
-        stageByContact.get(c.id) ?? null,
-        priorityByContact.get(c.id) ?? null
-      )
-    );
+  const activeRows = rows.filter((c) => includeArchived || !c.archivedAt);
+  const foliosByContact = await getFoliosGroupedByContact(
+    session.organizationId,
+    activeRows
+  );
+
+  const contacts = activeRows.map((c) =>
+    serializeContact(
+      c,
+      stageByContact.get(c.id) ?? null,
+      priorityByContact.get(c.id) ?? null,
+      false,
+      foliosByContact.get(c.id) ?? []
+    )
+  );
   return Response.json({ contacts });
 });
 

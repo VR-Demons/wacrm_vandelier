@@ -2,15 +2,16 @@ import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { scoped } from "@/lib/db/tenant";
 import { effectiveSource } from "@/server/contact-source";
-import type { FichaDto, PriorityValue } from "@/lib/types";
+import type { ContactDto, ContactFolioSummaryDto, FichaDto, PriorityValue } from "@/lib/types";
 
 export function serializeContact(
   c: typeof schema.contact.$inferSelect,
   stageName: string | null = null,
   priority: PriorityValue | null = null,
   /** 018: si llegó por un anuncio, la fuente no capturada se deduce "anuncio". */
-  llegoPorAnuncio = false
-) {
+  llegoPorAnuncio = false,
+  folios: ContactFolioSummaryDto[] = []
+): ContactDto {
   return {
     id: c.id,
     name: c.name,
@@ -23,6 +24,7 @@ export function serializeContact(
     // Viaja siempre, aunque esté vacía: la pantalla necesita distinguir "aún
     // no la han llenado" de "este contacto no la trae".
     ficha: (c.ficha as FichaDto | null) ?? {},
+    folios,
   };
 }
 

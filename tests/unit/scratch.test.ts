@@ -3,13 +3,14 @@ import React from "react";
 import { renderToString } from "react-dom/server";
 import { TemplateSender } from "@/components/inbox/template-sender";
 
+let stateIndex = 0;
 vi.mock("react", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react")>();
   return {
     ...actual,
-    useState: (initial: any) => {
-      if (initial === null) {
-        return [
+    useState: (_initial: unknown) => {
+      const states = [
+        [
           [
             {
               id: "t1",
@@ -25,12 +26,14 @@ vi.mock("react", async (importOriginal) => {
             },
           ],
           () => {},
-        ];
-      }
-      if (initial === "") {
-        return ["t1", () => {}];
-      }
-      return actual.useState(initial);
+        ],
+        ["t1", () => {}],
+        [{}, () => {}],
+        [false, () => {}],
+        [null, () => {}],
+      ];
+      if (stateIndex >= 5) stateIndex = 0;
+      return states[stateIndex++];
     },
     useEffect: () => {},
   };
@@ -38,6 +41,7 @@ vi.mock("react", async (importOriginal) => {
 
 describe("Template UI Presentation", () => {
   it("renders correctly", () => {
+    stateIndex = 0;
     const html = renderToString(
       React.createElement(TemplateSender, {
         conversationId: "test-conv",

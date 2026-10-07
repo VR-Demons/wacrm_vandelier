@@ -12,6 +12,7 @@ import {
 } from "@/lib/brain-status";
 import type {
   AnuncioDto,
+  ContactFolioSummaryDto,
   ConversationDto,
   FichaDto,
   FichaValue,
@@ -24,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { FichaPanel } from "@/components/ficha-panel";
+import { ContactFoliosList } from "@/components/contacts/contact-folios";
 
 const HANDOFF_LABELS: Record<string, string> = {
   cliente: "El cliente pidió un humano",
@@ -50,6 +52,7 @@ export function ContactPanel({
 }) {
   const [notes, setNotes] = useState("");
   const [ficha, setFicha] = useState<FichaDto>({});
+  const [folios, setFolios] = useState<ContactFolioSummaryDto[]>([]);
   const [notesLoaded, setNotesLoaded] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
   const [stages, setStages] = useState<StageDto[]>([]);
@@ -99,6 +102,7 @@ export function ContactPanel({
     if (detail) {
       setNotes(detail.contact?.notes ?? "");
       setFicha(detail.contact?.ficha ?? {});
+      setFolios(detail.folios ?? detail.contact?.folios ?? []);
       setCurrentStageId(detail.stage?.id ?? null);
       setLeadId(detail.lead?.id ?? null);
       setAnuncio(detail.anuncio ?? null);
@@ -119,6 +123,7 @@ export function ContactPanel({
       // conversación ocurre, y verla aparecer sola es justo para lo que sirve.
       // No pisa una edición a medias — el borrador vive dentro del panel.
       setFicha(detail.contact?.ficha ?? {});
+      setFolios(detail.folios ?? detail.contact?.folios ?? []);
       setCurrentStageId(detail.stage?.id ?? null);
       setLeadId(detail.lead?.id ?? null);
       // La imagen del creativo se copia después de que entra el mensaje: este
@@ -412,6 +417,19 @@ export function ContactPanel({
             </ol>
           </section>
         )}
+
+        {/* Folios de Cartera vinculados (restringido estrictamente a Folio, FechaExigibilidad y Producto) */}
+        <section className="border-b p-4">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="kicker">Folios de Cartera</p>
+            {folios.length > 0 && (
+              <span className="text-[11px] font-medium text-muted-foreground">
+                {folios.length} {folios.length === 1 ? "folio" : "folios"}
+              </span>
+            )}
+          </div>
+          <ContactFoliosList folios={folios} />
+        </section>
 
         {/* Ficha: lo que se SABE del lead. Va antes de Notas —lo que alguien
             OPINA— porque es lo que se consulta a mitad de una conversación. */}
