@@ -18,8 +18,20 @@ export const GET = withAuth(async (session) => {
 
   const leads = await db
     .select({
-      lead: schema.lead,
-      contact: schema.contact,
+      lead: {
+        id: schema.lead.id,
+        stageId: schema.lead.stageId,
+        position: schema.lead.position,
+        lastActivityAt: schema.lead.lastActivityAt,
+        amountCents: schema.lead.amountCents,
+        currency: schema.lead.currency,
+        priority: schema.lead.priority,
+      },
+      contact: {
+        id: schema.contact.id,
+        name: schema.contact.name,
+        phone: schema.contact.phone,
+      },
       conversationId: schema.conversation.id,
     })
     .from(schema.lead)

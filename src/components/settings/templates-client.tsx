@@ -107,7 +107,41 @@ export function TemplatesClient() {
                 {STATUS_BADGE[t.status].label}
               </Badge>
             </div>
-            <p className="mt-2 text-sm text-muted-foreground">{t.body}</p>
+            {!!t.header && (
+              <div className="mt-2 mb-1">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Encabezado</span>
+                <p className="text-sm font-medium">
+                  {(() => {
+                    const h = t.header as { format?: string; text?: string } | null | undefined;
+                    if (!h) return null;
+                    if (h.text) return h.text;
+                    if (h.format === "IMAGE") return "🖼️ Imagen";
+                    if (h.format === "VIDEO") return "🎥 Video";
+                    if (h.format === "DOCUMENT") return "📄 Documento";
+                    return h.format;
+                  })()}
+                </p>
+              </div>
+            )}
+            <div className="mt-2 mb-1">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Cuerpo</span>
+              <p className="text-sm text-muted-foreground">{t.body}</p>
+            </div>
+            {t.footer && (
+              <div className="mt-2 mb-1">
+                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Pie de mensaje</span>
+                <p className="text-sm text-muted-foreground">{t.footer}</p>
+              </div>
+            )}
+            {!!t.buttons && Array.isArray(t.buttons) && t.buttons.length > 0 && (
+              <div className="mt-3 flex gap-2 flex-wrap">
+                {(t.buttons as { text?: string }[]).map((btn, i: number) => (
+                  <Badge key={i} variant="secondary" className="text-xs bg-muted/50">
+                    {btn.text}
+                  </Badge>
+                ))}
+              </div>
+            )}
             {t.status === "rejected" && t.rejectionReason && (
               <p className="mt-2 text-xs text-destructive">
                 Razón del rechazo: {t.rejectionReason}

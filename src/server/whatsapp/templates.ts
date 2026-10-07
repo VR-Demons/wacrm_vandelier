@@ -4,6 +4,8 @@ import {
   renderBody,
   validateBodyVariables,
 } from "@/lib/templates";
+import { computeSyncDelta, mapMetaStatus } from "./templatesDelta";
+import { buildTemplateComponents } from "./templatePayload";
 import { getDb, schema } from "@/lib/db";
 import { newId } from "@/lib/db/ids";
 import { graphRequest, MetaApiError, normalizeRecipient } from "@/lib/meta/client";
@@ -60,6 +62,10 @@ export function serializeTemplate(t: TemplateRow) {
     language: t.language,
     category: t.category,
     body: t.body,
+    header: t.header,
+    footer: t.footer,
+    buttons: t.buttons,
+    variablesMap: t.variablesMap as Record<string, string> | null,
     status: t.status,
     rejectionReason: t.rejectionReason,
   };
@@ -163,18 +169,6 @@ export async function createTemplate(
   return inserted[0]!;
 }
 
-function mapMetaStatus(
-  status: string | undefined
-): TemplateRow["status"] | null {
-  const s = (status ?? "").toUpperCase();
-  if (s === "APPROVED") return "approved";
-  if (s === "REJECTED") return "rejected";
-  if (s === "PENDING" || s === "IN_APPEAL" || s === "PENDING_DELETION") {
-    return "pending";
-  }
-  return null;
-}
-
 /**
  * Sincroniza estados desde Graph (`GET {waba}/message_templates`). Cubre el
  * modo agencia: los webhooks de plantillas NO siguen el override de callback,
@@ -187,10 +181,10 @@ export async function syncTemplates(organizationId: string): Promise<number> {
   }
 
   let data: {
-    data?: { id?: string; name?: string; language?: string; status?: string; category?: string; quality_score?: unknown; rejected_reason?: string }[];
+    data?: { id?: string; name?: string; language?: string; status?: string; category?: string; rejected_reason?: string; components?: { type?: string; format?: string; text?: string; buttons?: { url?: string }[] }[] }[];
   };
   try {
-    data = await graphRequest(`${creds.wabaId}/message_templates`, {
+    data = await graphRequest(`${creds.wabaId}/message_templates?fields=name,language,status,category,rejected_reason,components`, {
       token: creds.token,
     });
   } catch (err) {
@@ -210,33 +204,33 @@ export async function syncTemplates(organizationId: string): Promise<number> {
     .from(schema.template)
     .where(scoped(schema.template.organizationId, organizationId));
 
-  let updated = 0;
-  for (const remote of data.data ?? []) {
-    const status = mapMetaStatus(remote.status);
-    if (!status) continue;
-    const match = local.find(
-      (t) =>
-        (remote.id && t.waTemplateId === remote.id) ||
-        (t.name === remote.name && t.language === remote.language)
-    );
-    if (!match) continue;
-    // Meta reclasifica la categoría al aprobar (una UTILITY puede volverse
-    // MARKETING, lo que cambia el costo por conversación): es autoridad.
-    const category = remote.category ?? match.category;
-    if (match.status === status && match.category === category) continue;
+  const { toDelete, toUpdate, toInsert } = computeSyncDelta(local, data.data || []);
+
+  for (const id of toDelete) {
+    await db.delete(schema.template).where(eq(schema.template.id, id));
+  }
+
+  for (const update of toUpdate) {
     await db
       .update(schema.template)
       .set({
-        status,
-        category,
-        rejectionReason: remote.rejected_reason ?? null,
-        waTemplateId: match.waTemplateId ?? remote.id ?? null,
+        ...update.data,
         updatedAt: new Date(),
       })
-      .where(eq(schema.template.id, match.id));
-    updated += 1;
+      .where(eq(schema.template.id, update.id));
   }
-  return updated;
+
+  if (toInsert.length > 0) {
+    await db.insert(schema.template).values(
+      toInsert.map((item) => ({
+        id: newId("template"),
+        organizationId,
+        ...item,
+      }))
+    );
+  }
+
+  return toDelete.length + toUpdate.length + toInsert.length;
 }
 
 /** Evento webhook `message_template_status_update` (modo directo, FR-050). */
@@ -275,7 +269,7 @@ export async function sendTemplate(input: {
   organizationId: string;
   conversationId: string;
   templateId: string;
-  variables?: string[];
+  variables?: Record<string, string>;
 }): Promise<{ messageId: string }> {
   const db = getDb();
 
@@ -295,15 +289,16 @@ export async function sendTemplate(input: {
   if (template.status !== "approved") {
     throw new TemplateError("invalid", "Solo se pueden enviar plantillas aprobadas");
   }
-  // Meta exige EXACTAMENTE un parámetro por variable del cuerpo: si sobran o
-  // falta alguno responde 132000 (plantilla y parámetros no coinciden).
+
+  // Check required body variables for error reporting (legacy behavior preservation)
   const variableCount = countVariables(template.body);
-  const values = (input.variables ?? [])
-    .slice(0, variableCount)
-    .map((v) => v.trim());
-  if (values.length < variableCount || values.some((v) => !v)) {
-    const missing = values.findIndex((v) => !v);
-    const n = missing === -1 ? values.length + 1 : missing + 1;
+  const bodyValues: string[] = [];
+  for (let i = 1; i <= variableCount; i++) {
+    bodyValues.push(input.variables?.[`body_${i}`]?.trim() || "");
+  }
+  if (bodyValues.some((v) => !v)) {
+    const missing = bodyValues.findIndex((v) => !v);
+    const n = missing === -1 ? bodyValues.length + 1 : missing + 1;
     throw new TemplateError(
       "invalid",
       variableCount === 1
@@ -313,11 +308,15 @@ export async function sendTemplate(input: {
   }
 
   const rows = await db
-    .select({ conversation: schema.conversation, contact: schema.contact })
+    .select({ conversation: schema.conversation, contact: schema.contact, organization: schema.organization })
     .from(schema.conversation)
     .innerJoin(
       schema.contact,
       eq(schema.conversation.contactId, schema.contact.id)
+    )
+    .innerJoin(
+      schema.organization,
+      eq(schema.conversation.organizationId, schema.organization.id)
     )
     .where(
       scoped(
@@ -357,6 +356,12 @@ export async function sendTemplate(input: {
     );
   }
 
+  const components = buildTemplateComponents(
+    { body: template.body, header: template.header as { format: string } | null, buttons: template.buttons },
+    input.variables || {},
+    row.organization.logo
+  );
+
   const waMessageId = await callGraphSend(creds, {
     messaging_product: "whatsapp",
     ...destinatario,
@@ -364,16 +369,7 @@ export async function sendTemplate(input: {
     template: {
       name: template.name,
       language: { code: template.language },
-      ...(variableCount > 0
-        ? {
-            components: [
-              {
-                type: "body",
-                parameters: values.map((text) => ({ type: "text", text })),
-              },
-            ],
-          }
-        : {}),
+      ...(components.length > 0 ? { components } : {}),
     },
   });
 
@@ -386,7 +382,7 @@ export async function sendTemplate(input: {
       waMessageId,
       direction: "out",
       type: "template",
-      text: renderBody(template.body, values),
+      text: renderBody(template.body, bodyValues),
       status: "pending",
       origin: "template",
     })

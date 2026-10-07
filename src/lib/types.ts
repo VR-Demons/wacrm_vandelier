@@ -84,6 +84,10 @@ export type TemplateDto = {
   language: string;
   category: string;
   body: string;
+  header?: unknown;
+  footer?: string | null;
+  buttons?: unknown;
+  variablesMap?: Record<string, string> | null;
   status: "draft" | "pending" | "approved" | "rejected";
   rejectionReason: string | null;
 };

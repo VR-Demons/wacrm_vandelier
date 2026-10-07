@@ -49,3 +49,49 @@ export function renderBody(body: string, variables: string[] = []): string {
     return variables[Number(index) - 1] ?? "";
   });
 }
+
+/**
+ * Extracts positional variables from Meta template components and returns a 
+ * dictionary mapping the variable keys to human-readable names.
+ */
+export function generateVariablesMap(components: { type?: string; format?: string; text?: string; buttons?: { url?: string }[] }[]): Record<string, string> {
+  const variablesMap: Record<string, string> = {};
+
+  if (!components || !Array.isArray(components)) return variablesMap;
+
+  for (const comp of components) {
+    const type = (comp.type || "").toLowerCase();
+    
+    if (type === "header") {
+      const format = (comp.format || "").toUpperCase();
+      if (format === "IMAGE") {
+        variablesMap[`${type}_1`] = "Imagen (URL)";
+      } else if (format === "VIDEO") {
+        variablesMap[`${type}_1`] = "Video (URL)";
+      } else if (format === "DOCUMENT") {
+        variablesMap[`${type}_1`] = "Documento (URL)";
+      } else if (format === "TEXT" && comp.text) {
+        const count = countVariables(comp.text);
+        for (let i = 1; i <= count; i++) {
+          variablesMap[`${type}_${i}`] = `Parámetro ${i}`;
+        }
+      }
+    } else if (type === "body" && comp.text) {
+      const count = countVariables(comp.text);
+      for (let i = 1; i <= count; i++) {
+        variablesMap[`${type}_${i}`] = `Parámetro ${i}`;
+      }
+    } else if (type === "buttons" && Array.isArray(comp.buttons)) {
+      comp.buttons.forEach((btn: { url?: string }, index: number) => {
+        if (btn.url) {
+          const count = countVariables(btn.url);
+          for (let i = 1; i <= count; i++) {
+            variablesMap[`button_${index}_${i}`] = `Parámetro ${i}`;
+          }
+        }
+      });
+    }
+  }
+
+  return variablesMap;
+}

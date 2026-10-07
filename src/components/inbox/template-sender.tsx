@@ -20,7 +20,7 @@ export function TemplateSender({
 }) {
   const [templates, setTemplates] = useState<TemplateDto[] | null>(null);
   const [selectedId, setSelectedId] = useState<string>("");
-  const [variables, setVariables] = useState<string[]>([]);
+  const [variables, setVariables] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,11 +60,15 @@ export function TemplateSender({
   }
 
   const selected = templates.find((t) => t.id === selectedId) ?? null;
-  // El cuerpo puede llevar {{1}}..{{n}}: el número de parámetros es el índice
-  // más alto, y Meta los exige todos.
-  const variableCount = selected ? countVariables(selected.body) : 0;
-  const values = Array.from({ length: variableCount }, (_, i) => variables[i] ?? "");
-  const missingValue = values.some((v) => !v.trim());
+  // Map out dynamic variables from variablesMap or fallback to body variables if empty
+  const variablesMap = selected?.variablesMap || {};
+  let variableKeys = Object.keys(variablesMap);
+  if (variableKeys.length === 0 && selected) {
+    const legacyCount = countVariables(selected.body);
+    variableKeys = Array.from({ length: legacyCount }, (_, i) => `body_${i + 1}`);
+  }
+
+  const missingValue = variableKeys.some((k) => !(variables[k] ?? "").trim());
 
   async function send() {
     if (!selected || sending) return;
@@ -77,7 +81,7 @@ export function TemplateSender({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           templateId: selected.id,
-          variables: variableCount > 0 ? values : undefined,
+          variables: variableKeys.length > 0 ? variables : undefined,
         }),
       }
     );
@@ -90,7 +94,7 @@ export function TemplateSender({
       return;
     }
     setSelectedId("");
-    setVariables([]);
+    setVariables({});
     onSent();
   }
 
@@ -103,7 +107,7 @@ export function TemplateSender({
           value={selectedId}
           onChange={(e) => {
             setSelectedId(e.target.value);
-            setVariables([]);
+            setVariables({});
           }}
           className="flex h-9 w-full rounded-md border border-input bg-card px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
@@ -116,32 +120,41 @@ export function TemplateSender({
         </select>
       </div>
       {selected && (
-        <p className="rounded-md bg-subtle p-2.5 text-xs text-muted-foreground">
-          {selected.body}
-        </p>
-      )}
-      {values.map((value, i) => (
-        <div key={i} className="space-y-1.5">
-          <Label htmlFor={`template-variable-${i + 1}`}>
-            Valor de {`{{${i + 1}}}`}
-          </Label>
-          <Input
-            id={`template-variable-${i + 1}`}
-            value={value}
-            onChange={(e) =>
-              setVariables((prev) => {
-                const next = [...prev];
-                while (next.length < variableCount) next.push("");
-                next[i] = e.target.value;
-                return next;
-              })
-            }
-            placeholder={
-              i === 0 ? "p. ej. el nombre del cliente" : "p. ej. 12 de agosto"
-            }
-          />
+        <div className="rounded-md bg-subtle p-2.5 text-xs text-muted-foreground space-y-2">
+          {selected.header && (
+            <div className="font-semibold text-foreground">
+              {(selected.header as any).text || (selected.header as any).format}
+            </div>
+          )}
+          <p>{selected.body}</p>
+          {selected.footer && <p className="opacity-75">{selected.footer}</p>}
         </div>
-      ))}
+      )}
+      {variableKeys.map((key) => {
+        const label = variablesMap[key] || `Variable {{${key.split('_')[1]}}}`;
+        return (
+          <div key={key} className="space-y-1.5">
+            <Label htmlFor={`template-variable-${key}`}>
+              {label}
+            </Label>
+            <Input
+              id={`template-variable-${key}`}
+              value={variables[key] ?? ""}
+              onChange={(e) =>
+                setVariables((prev) => ({
+                  ...prev,
+                  [key]: e.target.value,
+                }))
+              }
+              placeholder={
+                key.startsWith("header") && label.includes("URL")
+                  ? "https://..."
+                  : "Valor"
+              }
+            />
+          </div>
+        );
+      })}
       {error && <p className="text-xs text-destructive">{error}</p>}
       <Button
         onClick={() => void send()}

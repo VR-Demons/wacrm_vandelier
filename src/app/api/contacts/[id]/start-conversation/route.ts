@@ -19,7 +19,10 @@ type Params = { params: Promise<{ id: string }> };
 
 const bodySchema = z.object({
   templateId: z.string().min(1),
-  variables: z.array(z.string().trim().max(500)).max(10).optional(),
+  variables: z.union([
+    z.record(z.string().trim().max(500)),
+    z.array(z.string().trim().max(500))
+  ]).optional(),
 });
 
 /**
@@ -40,6 +43,16 @@ export const POST = withAuth(async (session, req: Request, ctx: Params) => {
 
   const body = await parseBody(req, bodySchema);
   if (!body.ok) return body.response;
+
+  let variablesMap: Record<string, string> | undefined = undefined;
+  if (body.data.variables && !Array.isArray(body.data.variables)) {
+    variablesMap = body.data.variables;
+  } else if (Array.isArray(body.data.variables)) {
+    variablesMap = {};
+    body.data.variables.forEach((v, i) => {
+      variablesMap![`body_${i + 1}`] = v;
+    });
+  }
 
   const db = getDb();
   const existing = await db
@@ -73,7 +86,7 @@ export const POST = withAuth(async (session, req: Request, ctx: Params) => {
       organizationId: session.organizationId,
       conversationId: conversation.id,
       templateId: body.data.templateId,
-      variables: body.data.variables,
+      variables: variablesMap,
     });
     return Response.json({
       messageId: result.messageId,

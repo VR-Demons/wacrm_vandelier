@@ -3,7 +3,8 @@ import {
   countVariables,
   renderBody,
   validateBodyVariables,
-} from "@/server/whatsapp/templates";
+  generateVariablesMap
+} from "@/lib/templates";
 
 describe("countVariables / validateBodyVariables (FR-050)", () => {
   it("sin variables → 0, válido", () => {
@@ -64,5 +65,64 @@ describe("renderBody", () => {
   it("sin valores → variables vacías", () => {
     expect(renderBody("Hola {{1}}!")).toBe("Hola !");
     expect(renderBody("Hola {{1}} el {{2}}", ["María"])).toBe("Hola María el ");
+  });
+});
+
+describe("generateVariablesMap", () => {
+  it("generates map for body and header text variables", () => {
+    const components = [
+      {
+        type: "HEADER",
+        format: "TEXT",
+        text: "Offer {{1}}",
+      },
+      {
+        type: "BODY",
+        text: "Hello {{1}}, get {{2}} off today!",
+      },
+    ];
+
+    const result = generateVariablesMap(components);
+    
+    expect(result).toEqual({
+      header_1: "Parámetro 1",
+      body_1: "Parámetro 1",
+      body_2: "Parámetro 2",
+    });
+  });
+
+  it("generates map for header image format", () => {
+    const components = [
+      {
+        type: "HEADER",
+        format: "IMAGE",
+      },
+    ];
+
+    const result = generateVariablesMap(components);
+    
+    expect(result).toEqual({
+      header_1: "Imagen (URL)",
+    });
+  });
+  
+  it("generates map for buttons with variables", () => {
+    const components = [
+      {
+        type: "BUTTONS",
+        buttons: [
+          {
+            type: "URL",
+            url: "https://example.com/{{1}}"
+          }
+        ]
+      }
+    ];
+
+    const result = generateVariablesMap(components);
+    
+    expect(result).toEqual({
+      button_0_1: "Parámetro 1",
+    });
   });
 });

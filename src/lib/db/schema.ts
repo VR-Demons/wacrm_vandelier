@@ -645,6 +645,10 @@ export const template = pgTable(
     language: text("language").notNull(),
     category: text("category").notNull(),
     body: text("body").notNull(),
+    header: jsonb("header"),
+    footer: text("footer"),
+    buttons: jsonb("buttons"),
+    variablesMap: jsonb("variables_map"),
     status: text("status", {
       enum: ["draft", "pending", "approved", "rejected"],
     })

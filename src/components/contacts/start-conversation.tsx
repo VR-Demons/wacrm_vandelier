@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -31,7 +31,7 @@ export function StartConversation({
 }) {
   const [templates, setTemplates] = useState<TemplateDto[] | null>(null);
   const [templateId, setTemplateId] = useState("");
-  const [vars, setVars] = useState<string[]>([]);
+  const [vars, setVars] = useState<Record<string, string>>({});
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -47,7 +47,14 @@ export function StartConversation({
   }, []);
 
   const elegida = templates?.find((t) => t.id === templateId) ?? null;
-  const nVars = elegida ? countVariables(elegida.body) : 0;
+  const variablesMap = elegida?.variablesMap || {};
+  let variableKeys = Object.keys(variablesMap);
+  if (variableKeys.length === 0 && elegida) {
+    const legacyCount = countVariables(elegida.body);
+    variableKeys = Array.from({ length: legacyCount }, (_, i) => `body_${i + 1}`);
+  }
+
+  const missingValue = variableKeys.some((k) => !(vars[k] ?? "").trim());
 
   async function enviar() {
     setEnviando(true);
@@ -57,7 +64,7 @@ export function StartConversation({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         templateId,
-        variables: nVars > 0 ? vars.slice(0, nVars) : undefined,
+        variables: variableKeys.length > 0 ? vars : undefined,
       }),
     }).catch(() => null);
     setEnviando(false);
@@ -103,7 +110,7 @@ export function StartConversation({
         value={templateId}
         onChange={(e) => {
           setTemplateId(e.target.value);
-          setVars([]);
+          setVars({});
         }}
         aria-label="Plantilla para iniciar"
         className="h-9 w-full rounded-md border border-input bg-card px-2 text-sm"
@@ -121,23 +128,31 @@ export function StartConversation({
         </p>
       )}
 
-      {Array.from({ length: nVars }, (_, i) => (
-        <Input
-          key={i}
-          value={vars[i] ?? ""}
-          aria-label={`Valor de la variable ${i + 1}`}
-          placeholder={`Valor de {{${i + 1}}}`}
-          onChange={(e) => {
-            const next = [...vars];
-            next[i] = e.target.value;
-            setVars(next);
-          }}
-        />
-      ))}
+      {variableKeys.map((key) => {
+        const label = variablesMap[key] || `Variable {{${key.split('_')[1]}}}`;
+        return (
+          <Input
+            key={key}
+            value={vars[key] ?? ""}
+            aria-label={label}
+            placeholder={
+              key.startsWith("header") && label.includes("URL")
+                ? "https://..."
+                : label
+            }
+            onChange={(e) => {
+              setVars((prev) => ({
+                ...prev,
+                [key]: e.target.value,
+              }));
+            }}
+          />
+        );
+      })}
 
       <Button
         size="sm"
-        disabled={enviando || !templateId || vars.slice(0, nVars).some((v) => !v?.trim())}
+        disabled={enviando || !templateId || missingValue}
         onClick={() => void enviar()}
       >
         <Send className="mr-1.5 h-3.5 w-3.5" strokeWidth={1.7} />
