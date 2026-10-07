@@ -68,7 +68,10 @@ export function TemplateSender({
     variableKeys = Array.from({ length: legacyCount }, (_, i) => `body_${i + 1}`);
   }
 
-  const missingValue = variableKeys.some((k) => !(variables[k] ?? "").trim());
+  const missingValue = variableKeys.some((k) => {
+    if (variablesMap[k] === "Imagen (URL)") return false;
+    return !(variables[k] ?? "").trim();
+  });
 
   async function send() {
     if (!selected || sending) return;
@@ -133,6 +136,7 @@ export function TemplateSender({
       )}
       {variableKeys.map((key) => {
         const label = variablesMap[key] || `Variable {{${key.split('_')[1]}}}`;
+        if (label === "Imagen (URL)") return null;
         return (
           <div key={key} className="space-y-1.5">
             <Label htmlFor={`template-variable-${key}`}>
