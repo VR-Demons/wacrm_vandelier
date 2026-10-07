@@ -1,5 +1,8 @@
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import { apiError, parseBody, withAuth } from "@/lib/api";
+import { getDb, schema } from "@/lib/db";
+import { scoped } from "@/lib/db/tenant";
 import { publish } from "@/server/events/bus";
 import { serializeConversation, getConversation, updateConversation } from "@/server/inbox/queries";
 
@@ -37,4 +40,24 @@ export const PATCH = withAuth(async (session, req: Request, ctx: Params) => {
     return Response.json({ conversation: dto });
   }
   return Response.json({ conversation: null });
+});
+
+export const DELETE = withAuth(async (session, _req: Request, ctx: Params) => {
+  const { id } = await ctx.params;
+  const db = getDb();
+  
+  const deleted = await db
+    .delete(schema.conversation)
+    .where(
+      scoped(
+        schema.conversation.organizationId,
+        session.organizationId,
+        eq(schema.conversation.id, id)
+      )
+    )
+    .returning();
+    
+  if (!deleted[0]) return apiError(404, "not_found", "Conversación no encontrada");
+  
+  return Response.json({ success: true });
 });

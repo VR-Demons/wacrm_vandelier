@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -12,6 +12,7 @@ import {
   Smartphone,
   Sparkles,
   UserRound,
+  Trash2,
 } from "lucide-react";
 import type { MessageDto, MessageMediaDto } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -182,8 +183,15 @@ function bubbleTime(iso: string): string {
   });
 }
 
-export function MessageThread({ messages }: { messages: MessageDto[] }) {
+export function MessageThread({
+  messages,
+  onDeleteMessage,
+}: {
+  messages: MessageDto[];
+  onDeleteMessage?: (id: string) => Promise<void>;
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [deletingMsg, setDeletingMsg] = useState<MessageDto | null>(null);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -255,6 +263,15 @@ export function MessageThread({ messages }: { messages: MessageDto[] }) {
                   </span>
                 )}
                 <span className="float-right ml-2 mt-1 flex items-center gap-1">
+                  {onDeleteMessage && m.status !== "pending" && (
+                    <button
+                      onClick={() => setDeletingMsg(m)}
+                      className="text-text-4 hover:text-danger-text focus:outline-none"
+                      title="Eliminar mensaje"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  )}
                   {m.aiGenerated && (
                     <span
                       className="inline-flex items-center gap-0.5 text-[10px] font-medium text-brand-ink"
@@ -295,6 +312,38 @@ export function MessageThread({ messages }: { messages: MessageDto[] }) {
           </div>
         );
       })}
+
+      {deletingMsg && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-sm rounded-lg border border-danger-soft bg-popover p-5 shadow-xl">
+            <h3 className="mb-2 font-semibold text-danger-text">¿Eliminar mensaje?</h3>
+            <p className="mb-6 text-sm leading-relaxed text-text-2">
+              Se borrará este mensaje de forma permanente. Esta acción no se puede deshacer.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                className="rounded-md px-3 py-1.5 text-sm font-medium hover:bg-accent"
+                onClick={() => setDeletingMsg(null)}
+              >
+                Cancelar
+              </button>
+              <button
+                className="rounded-md bg-danger px-3 py-1.5 text-sm font-medium text-danger-fg hover:bg-danger/90"
+                onClick={async () => {
+                  if (onDeleteMessage) await onDeleteMessage(deletingMsg.id);
+                  setDeletingMsg(null);
+                }}
+              >
+                Sí, eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

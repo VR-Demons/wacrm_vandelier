@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { AlertTriangle, Cable, Check, ChevronRight, Sparkles, UserRound } from "lucide-react";
+import { AlertTriangle, Cable, Check, ChevronRight, Sparkles, UserRound, Trash2 } from "lucide-react";
 import {
   externalAnswerLabel,
   externalAnswering,
@@ -60,8 +61,15 @@ export function ContactPanel({
   // toggle "Respondiendo" mentiría cuando el agente aún no se ha
   // configurado/encendido, y pediría la clave de IA aunque conteste Nea.
   const [brain, setBrain] = useState<BrainStatusDto | null>(null);
+  const [deletingConv, setDeletingConv] = useState(false);
+  const router = useRouter();
 
   const contactId = conversation.contact.id;
+
+  async function deleteConversation() {
+    await fetch(`/api/conversations/${conversation.id}`, { method: "DELETE" }).catch(() => null);
+    router.push("/inbox");
+  }
 
   const aiConfigured = brain?.embedded.configured ?? false;
   const agentReady = brain?.embedded.answering ?? false;
@@ -321,7 +329,43 @@ export function ContactPanel({
               <AnuncioOrigen anuncio={anuncio} />
             </div>
           )}
+
+          <div className="mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-danger-text hover:bg-danger-tint hover:text-danger-text"
+              onClick={() => setDeletingConv(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Eliminar conversación
+            </Button>
+          </div>
         </section>
+
+        {deletingConv && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Eliminar conversación"
+          >
+            <div className="w-full max-w-sm rounded-lg border border-danger-soft bg-popover p-5 shadow-xl">
+              <h3 className="mb-2 font-semibold text-danger-text">¿Eliminar conversación?</h3>
+              <p className="mb-6 text-sm leading-relaxed text-text-2">
+                Se borrará el historial de mensajes de forma permanente. El contacto y sus tratos se mantendrán.
+              </p>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setDeletingConv(false)}>
+                  Cancelar
+                </Button>
+                <Button variant="destructive" onClick={() => void deleteConversation()}>
+                  Sí, eliminar
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stepper de etapa */}
         {stages.length > 0 && leadId && (

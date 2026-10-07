@@ -9,6 +9,7 @@ import {
   MessageSquareText,
   Search,
   Send,
+  Trash2,
   UserPlus,
 } from "lucide-react";
 import type { ContactDto } from "@/lib/types";
@@ -32,6 +33,7 @@ export function ContactsClient() {
   const [stages, setStages] = useState<string[]>([]);
   const [showArchived, setShowArchived] = useState(false);
   const [editing, setEditing] = useState<ContactDto | null>(null);
+  const [deleting, setDeleting] = useState<ContactDto | null>(null);
   const [creando, setCreando] = useState(false);
   const [escribiendo, setEscribiendo] = useState<ContactDto | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -81,6 +83,11 @@ export function ContactsClient() {
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
     }).catch(() => null);
+    void refetch();
+  }
+
+  async function deleteContact(id: string) {
+    await fetch(`/api/contacts/${id}`, { method: "DELETE" }).catch(() => null);
     void refetch();
   }
 
@@ -228,6 +235,15 @@ export function ContactsClient() {
                       <Archive className="h-4 w-4" />
                     )}
                   </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-danger-text hover:text-danger-text hover:bg-danger-tint"
+                    aria-label="Eliminar contacto"
+                    onClick={() => setDeleting(c)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </li>
             ))}
@@ -244,6 +260,36 @@ export function ContactsClient() {
             setEditing(null);
           }}
         />
+      )}
+
+      {deleting && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Eliminar contacto"
+        >
+          <div className="w-full max-w-sm rounded-lg border border-danger-soft bg-popover p-5 shadow-xl">
+            <h3 className="mb-2 font-semibold text-danger-text">¿Eliminar contacto?</h3>
+            <p className="mb-6 text-sm leading-relaxed text-text-2">
+              Se borrará a <strong>{deleting.name}</strong> y todo su historial de mensajes, tratos en el embudo y eventos. Esta acción no se puede deshacer.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setDeleting(null)}>
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  await deleteContact(deleting.id);
+                  setDeleting(null);
+                }}
+              >
+                Sí, eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {escribiendo && (

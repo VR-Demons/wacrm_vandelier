@@ -270,6 +270,17 @@ export function InboxClient({ channels }: { channels: readonly Channel[] }) {
     [refetchConversations]
   );
 
+  const deleteMessage = useCallback(
+    async (msgId: string) => {
+      if (!selectedIdRef.current) return;
+      await fetch(`/api/conversations/${selectedIdRef.current}/messages/${msgId}`, {
+        method: "DELETE",
+      }).catch(() => null);
+      setMessages((prev) => prev.filter((m) => m.id !== msgId));
+    },
+    []
+  );
+
   return (
     <div className="flex h-full">
       {/* Móvil: una columna a la vez. La lista cede la pantalla completa al
@@ -345,7 +356,7 @@ export function InboxClient({ channels }: { channels: readonly Channel[] }) {
                 </button>
               )}
             </header>
-            <MessageThread messages={thread} />
+            <MessageThread messages={thread} onDeleteMessage={deleteMessage} />
             <Composer
               conversation={selected}
               onSend={sendText}

@@ -55,6 +55,9 @@ export function BrandingClient({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [wiping, setWiping] = useState(false);
+  const [wipeConfirm, setWipeConfirm] = useState("");
+  const [wipingReq, setWipingReq] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings/branding")
@@ -228,6 +231,69 @@ export function BrandingClient({
           </Button>
         </CardContent>
       </Card>
+
+      <Card className="border-danger-soft">
+        <CardHeader>
+          <CardTitle className="text-danger-text">Zona de peligro</CardTitle>
+          <CardDescription>
+            Borra todos los contactos de la organización. Esto también eliminará permanentemente todas sus conversaciones, mensajes y tratos. Esta acción dejará tu CRM como nuevo.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="destructive" onClick={() => setWiping(true)}>
+            Eliminar todos los contactos y datos
+          </Button>
+        </CardContent>
+      </Card>
+
+      {wiping && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-overlay p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-md rounded-lg border border-danger-soft bg-popover p-5 shadow-xl">
+            <h3 className="mb-2 font-semibold text-danger-text">¿Eliminar TODOS los contactos?</h3>
+            <p className="mb-4 text-sm leading-relaxed text-text-2">
+              Esta acción borrará <strong>todos los contactos</strong>, conversaciones, mensajes y oportunidades del pipeline en este espacio de trabajo.
+            </p>
+            <p className="mb-4 text-sm leading-relaxed text-text-2">
+              Para confirmar, escribe <strong>ELIMINAR</strong> abajo:
+            </p>
+            <Input
+              value={wipeConfirm}
+              onChange={(e) => setWipeConfirm(e.target.value)}
+              placeholder="ELIMINAR"
+              className="mb-6"
+            />
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setWiping(false);
+                  setWipeConfirm("");
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={wipeConfirm !== "ELIMINAR" || wipingReq}
+                onClick={async () => {
+                  setWipingReq(true);
+                  await fetch("/api/settings/contacts", { method: "DELETE" }).catch(() => null);
+                  setWipingReq(false);
+                  setWiping(false);
+                  setWipeConfirm("");
+                  router.push("/contacts");
+                }}
+              >
+                {wipingReq ? "Eliminando…" : "Sí, eliminar todo"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
