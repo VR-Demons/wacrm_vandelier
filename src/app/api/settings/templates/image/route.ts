@@ -1,7 +1,6 @@
 import { rm } from "node:fs/promises";
 import { apiError, withAuth } from "@/lib/api";
 import {
-  FAVICON_MIMES as IMAGE_MIMES,
   MAX_FAVICON_BYTES as MAX_IMAGE_BYTES,
   sniffFaviconMime as sniffImageMime,
 } from "@/lib/favicon";

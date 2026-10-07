@@ -1,5 +1,4 @@
 import { readMediaFile } from "@/server/whatsapp/media";
-import { DEFAULT_BRANDING } from "@/lib/branding";
 
 export const dynamic = "force-dynamic";
 
