@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { TemplateDto } from "@/lib/types";
-import { countVariables } from "@/lib/templates";
+import { extractAllVariables } from "@/lib/templates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,16 +60,20 @@ export function TemplateSender({
   }
 
   const selected = templates.find((t) => t.id === selectedId) ?? null;
-  // Map out dynamic variables from variablesMap or fallback to body variables if empty
   const variablesMap = selected?.variablesMap || {};
-  let variableKeys = Object.keys(variablesMap);
-  if (variableKeys.length === 0 && selected) {
-    const legacyCount = countVariables(selected.body);
-    variableKeys = Array.from({ length: legacyCount }, (_, i) => `body_${i + 1}`);
+  const variableKeys = Object.keys(variablesMap);
+  if (selected) {
+    const bodyVars = extractAllVariables(selected.body);
+    bodyVars.forEach((varName) => {
+      const key = /^\d+$/.test(varName) ? `body_${varName}` : varName;
+      if (!variableKeys.includes(key)) {
+        variableKeys.push(key);
+      }
+    });
   }
 
   const missingValue = variableKeys.some((k) => {
-    if (variablesMap[k] === "Imagen (URL)") return false;
+    if (variablesMap[k] === "Imagen (URL)" || variablesMap[k] === "Video (URL)" || variablesMap[k] === "Documento (URL)") return false;
     return !(variables[k] ?? "").trim();
   });
 
@@ -135,7 +139,7 @@ export function TemplateSender({
         </div>
       )}
       {variableKeys.map((key) => {
-        const label = variablesMap[key] || `Variable {{${key.split('_')[1]}}}`;
+        const label = variablesMap[key] || (key.startsWith("body_") ? `Variable {{${key.slice(5)}}}` : `Variable {{${key}}}`);
         if (label === "Imagen (URL)") return null;
         return (
           <div key={key} className="space-y-1.5">

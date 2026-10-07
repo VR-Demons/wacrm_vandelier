@@ -47,7 +47,7 @@ export function validateBodyVariables(body: string): string | null {
   return null;
 }
 
-/** Extrae nombres de variables en el orden que aparecen por primera vez. */
+/** Extrae nombres de variables en el orden que aparecen por primera vez. (Solo letras) */
 export function extractNamedVariables(body: string): string[] {
   const names = new Set<string>();
   for (const m of body.matchAll(NAMED_VARIABLE_REGEX)) {
@@ -55,6 +55,16 @@ export function extractNamedVariables(body: string): string[] {
     if (val && !/^\d+$/.test(val)) {
       names.add(val);
     }
+  }
+  return [...names];
+}
+
+/** Extrae todas las variables en orden de aparición, sean números o nombres. */
+export function extractAllVariables(body: string): string[] {
+  const names = new Set<string>();
+  for (const m of body.matchAll(NAMED_VARIABLE_REGEX)) {
+    const val = m[1]?.trim();
+    if (val) names.add(val);
   }
   return [...names];
 }
@@ -79,10 +89,16 @@ export function processNamedVariables(body: string): { metaBody: string; variabl
   return { metaBody, variablesMap };
 }
 
-/** Sustituye {{n}} por `variables[n-1]` (vacío si no hay valor). */
-export function renderBody(body: string, variables: string[] = []): string {
-  return body.replace(VARIABLE_REGEX, (_match, index: string) => {
-    return variables[Number(index) - 1] ?? "";
+/** Sustituye {{n}} o {{nombre}} por su valor correspondiente en el diccionario. */
+export function renderBody(body: string, variables: Record<string, string> | string[] = []): string {
+  if (Array.isArray(variables)) {
+    return body.replace(VARIABLE_REGEX, (_match, index: string) => {
+      return variables[Number(index) - 1] ?? "";
+    });
+  }
+  return body.replace(NAMED_VARIABLE_REGEX, (_match, val: string) => {
+    const trimmed = val.trim();
+    return variables[`body_${trimmed}`] ?? variables[trimmed] ?? "";
   });
 }
 

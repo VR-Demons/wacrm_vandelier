@@ -4,6 +4,7 @@ import {
   renderBody,
   validateBodyVariables,
   processNamedVariables,
+  extractAllVariables,
 } from "@/lib/templates";
 import { computeSyncDelta, mapMetaStatus } from "./templatesDelta";
 import { buildTemplateComponents } from "./templatePayload";
@@ -295,21 +296,15 @@ export async function sendTemplate(input: {
     throw new TemplateError("invalid", "Solo se pueden enviar plantillas aprobadas");
   }
 
-  // Check required body variables for error reporting (legacy behavior preservation)
-  const variableCount = countVariables(template.body);
-  const bodyValues: string[] = [];
-  for (let i = 1; i <= variableCount; i++) {
-    bodyValues.push(input.variables?.[`body_${i}`]?.trim() || "");
-  }
-  if (bodyValues.some((v) => !v)) {
-    const missing = bodyValues.findIndex((v) => !v);
-    const n = missing === -1 ? bodyValues.length + 1 : missing + 1;
-    throw new TemplateError(
-      "invalid",
-      variableCount === 1
-        ? "La plantilla requiere el valor de {{1}}"
-        : `La plantilla requiere ${variableCount} valores: falta {{${n}}}`
-    );
+  const bodyVars = extractAllVariables(template.body);
+  for (const varName of bodyVars) {
+    const val = (input.variables?.[`body_${varName}`] ?? input.variables?.[varName] ?? "").trim();
+    if (!val) {
+      throw new TemplateError(
+        "invalid",
+        `La plantilla requiere un valor para {{${varName}}}`
+      );
+    }
   }
 
   const rows = await db
@@ -387,7 +382,7 @@ export async function sendTemplate(input: {
       waMessageId,
       direction: "out",
       type: "template",
-      text: renderBody(template.body, bodyValues),
+      text: renderBody(template.body, input.variables || {}),
       status: "pending",
       origin: "template",
     })

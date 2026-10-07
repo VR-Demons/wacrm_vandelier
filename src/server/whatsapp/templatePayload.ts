@@ -1,3 +1,5 @@
+import { extractAllVariables } from "@/lib/templates";
+
 export function buildTemplateComponents(
   template: { body: string; header?: { format: string } | null; buttons?: unknown },
   variables: Record<string, string>,
@@ -37,14 +39,16 @@ export function buildTemplateComponents(
   }
 
   // BODY
-  const bodyRegex = /\{\{(\d+)\}\}/g;
-  const bodyMatches = [...template.body.matchAll(bodyRegex)];
-  if (bodyMatches.length > 0) {
-    const maxIndex = Math.max(...bodyMatches.map(m => parseInt(m[1] as string, 10)));
+  const bodyVars = extractAllVariables(template.body);
+  if (bodyVars.length > 0) {
     const bodyParams: Record<string, unknown>[] = [];
-    for (let i = 1; i <= maxIndex; i++) {
-      const val = variables[`body_${i}`] || "";
-      bodyParams.push({ type: "text", text: val });
+    for (const varName of bodyVars) {
+      const val = variables[`body_${varName}`] || variables[varName] || "";
+      if (/^\d+$/.test(varName)) {
+        bodyParams.push({ type: "text", text: val });
+      } else {
+        bodyParams.push({ type: "text", parameter_name: varName, text: val });
+      }
     }
     if (bodyParams.length > 0) {
       result.push({
