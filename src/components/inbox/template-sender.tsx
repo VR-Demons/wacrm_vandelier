@@ -121,9 +121,10 @@ export function TemplateSender({
       </div>
       {selected && (
         <div className="rounded-md bg-subtle p-2.5 text-xs text-muted-foreground space-y-2">
-          {selected.header && (
+          {!!selected.header && (
             <div className="font-semibold text-foreground">
-              {(selected.header as any).text || (selected.header as any).format}
+              {(selected.header as { text?: string; format?: string }).text ||
+                (selected.header as { text?: string; format?: string }).format}
             </div>
           )}
           <p>{selected.body}</p>
