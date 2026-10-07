@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   CalendarDays,
   ChartColumn,
+  Database,
   FlaskConical,
   Inbox,
   Kanban,
@@ -42,6 +43,7 @@ const NAV: NavItem[] = [
   { href: "/inbox", label: "Bandeja", icon: Inbox, badge: true },
   { href: "/pipeline", label: "Pipeline", icon: Kanban },
   { href: "/contacts", label: "Contactos", icon: Users },
+  { href: "https://vandelierai.com/", label: "Base de Datos", icon: Database },
   // 019 — Después de Contactos: primero se atiende y se organiza, luego se
   // mide. Antes de Agente y Laboratorio, que son configuración.
   { href: "/results", label: "Resultados", icon: ChartColumn },
@@ -175,8 +177,28 @@ export function AppNav({
 
       <nav className="flex flex-col gap-0.5">
         {items.map((item) => {
+          const isExternal =
+            item.href.startsWith("http://") || item.href.startsWith("https://");
           const active =
-            pathname === item.href || pathname.startsWith(`${item.href}/`);
+            !isExternal &&
+            (pathname === item.href || pathname.startsWith(`${item.href}/`));
+
+          if (isExternal) {
+            return (
+              <a
+                key={item.href}
+                href={item.href}
+                className={navItemClass(false)}
+              >
+                <item.icon
+                  className="h-[17px] w-[17px] text-text-3"
+                  strokeWidth={1.8}
+                />
+                <span className="flex-1">{item.label}</span>
+              </a>
+            );
+          }
+
           return (
             <Link key={item.href} href={item.href} className={navItemClass(active)}>
               <item.icon
