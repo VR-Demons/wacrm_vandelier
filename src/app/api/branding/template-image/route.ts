@@ -1,4 +1,5 @@
 import { readMediaFile } from "@/server/whatsapp/media";
+import { sniffFaviconMime } from "@/lib/favicon";
 
 export const dynamic = "force-dynamic";
 
@@ -26,10 +27,10 @@ export async function GET(req: Request) {
 
   try {
     const buf = await readMediaFile(org, TEMPLATE_IMAGE_ASSET);
-    // Asumimos mime dinámico (o forzamos octet-stream si no lo guardamos).
-    // Para simplificar, usamos un tipo genérico o deducimos.
-    return new Response(new Uint8Array(buf), {
-      headers: cabeceras("image/png", cacheable), // o leerlo de sniff
+    const bytes = new Uint8Array(buf);
+    const mime = sniffFaviconMime(bytes) || "application/octet-stream";
+    return new Response(bytes, {
+      headers: cabeceras(mime, cacheable),
     });
   } catch {
     return new Response("Not found", { status: 404 });
