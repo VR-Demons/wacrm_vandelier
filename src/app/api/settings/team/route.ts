@@ -36,6 +36,7 @@ const createSchema = z.object({
   name: z.string().trim().min(1).max(120),
   email: z.string().trim().email(),
   password: z.string().min(8).max(128),
+  role: z.enum(["member", "operador"]).default("member"),
 });
 
 /** Alta de cuenta de equipo (owner only): email + contraseña temporal (FR-061). */
@@ -75,7 +76,7 @@ export const POST = withAuth(async (session, req: Request) => {
       id: newId("member"),
       organizationId: session.organizationId,
       userId: newUserId,
-      role: "member",
+      role: body.data.role,
     })
     .onConflictDoNothing();
 

@@ -129,9 +129,15 @@ export function AppNav({
   const settingsActive = pathname.startsWith("/settings");
   // Citas va después de Pipeline: es el paso siguiente de un trato, no una
   // sección aparte.
-  const items = agenda
+  let items = agenda
     ? [...NAV.slice(0, 2), AGENDA_ITEM, ...NAV.slice(2)]
     : NAV;
+
+  if (role === "operador") {
+    items = items.filter(
+      (item) => !["/results", "/agent", "/lab"].includes(item.href)
+    );
+  }
 
   return (
     <aside
@@ -190,13 +196,15 @@ export function AppNav({
 
       <div className="flex-1" />
 
-      <Link href="/settings" className={navItemClass(settingsActive)}>
-        <Settings
-          className={cn("h-[17px] w-[17px]", settingsActive ? "text-brand" : "text-text-3")}
-          strokeWidth={1.8}
-        />
-        Ajustes
-      </Link>
+      {role !== "operador" && (
+        <Link href="/settings" className={navItemClass(settingsActive)}>
+          <Settings
+            className={cn("h-[17px] w-[17px]", settingsActive ? "text-brand" : "text-text-3")}
+            strokeWidth={1.8}
+          />
+          Ajustes
+        </Link>
+      )}
 
       <div className="mt-1 flex items-center gap-2.5 rounded-sm px-2.5 py-2 hover:bg-accent">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-bold text-brand-text">
@@ -205,7 +213,7 @@ export function AppNav({
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[13px] font-semibold">{userName}</span>
           <span className="block truncate text-[11px] text-text-3">
-            {role === "owner" ? "Propietario" : "Equipo"} · En línea
+            {role === "owner" ? "Propietario" : role === "operador" ? "Operador" : "Administrador"} · En línea
           </span>
         </span>
         <ThemeToggle initial={theme} />

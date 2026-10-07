@@ -22,6 +22,7 @@ export function TeamClient() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [tempPassword, setTempPassword] = useState("");
+  const [role, setRole] = useState("member");
   const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -54,7 +55,7 @@ export function TeamClient() {
     const res = await fetch("/api/settings/team", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name, email, password: tempPassword }),
+      body: JSON.stringify({ name, email, password: tempPassword, role }),
     }).catch(() => null);
     setSaving(false);
     if (!res?.ok) {
@@ -68,6 +69,7 @@ export function TeamClient() {
     setName("");
     setEmail("");
     setTempPassword("");
+    setRole("member");
     void refetch();
   }
 
@@ -101,18 +103,32 @@ export function TeamClient() {
               />
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="team-password">Contraseña temporal</Label>
-            <div className="flex gap-2">
-              <Input
-                id="team-password"
-                value={tempPassword}
-                onChange={(e) => setTempPassword(e.target.value)}
-                placeholder="mínimo 8 caracteres"
-              />
-              <Button variant="outline" onClick={generatePassword}>
-                Generar
-              </Button>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="team-role">Rol</Label>
+              <select
+                id="team-role"
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+              >
+                <option value="member">Administrador</option>
+                <option value="operador">Operador</option>
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="team-password">Contraseña temporal</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="team-password"
+                  value={tempPassword}
+                  onChange={(e) => setTempPassword(e.target.value)}
+                  placeholder="mínimo 8 caracteres"
+                />
+                <Button variant="outline" onClick={generatePassword}>
+                  Generar
+                </Button>
+              </div>
             </div>
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
@@ -154,7 +170,7 @@ export function TeamClient() {
               <p className="text-xs text-muted-foreground">{m.email}</p>
             </div>
             <Badge variant={m.role === "owner" ? "default" : "secondary"}>
-              {m.role === "owner" ? "Propietario" : "Miembro"}
+              {m.role === "owner" ? "Propietario" : m.role === "operador" ? "Operador" : "Administrador"}
             </Badge>
           </div>
         ))}
