@@ -140,7 +140,6 @@ export function TemplateSender({
       )}
       {variableKeys.map((key) => {
         const label = variablesMap[key] || (key.startsWith("body_") ? `Variable {{${key.slice(5)}}}` : `Variable {{${key}}}`);
-        if (label === "Imagen (URL)") return null;
         return (
           <div key={key} className="space-y-1.5">
             <Label htmlFor={`template-variable-${key}`}>
@@ -156,7 +155,9 @@ export function TemplateSender({
                 }))
               }
               placeholder={
-                key.startsWith("header") && label.includes("URL")
+                label === "Imagen (URL)"
+                  ? "Dejar vacío para usar el logo en Ajustes"
+                  : key.startsWith("header") && label.includes("URL")
                   ? "https://..."
                   : "Valor"
               }

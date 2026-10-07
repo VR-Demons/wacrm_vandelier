@@ -44,7 +44,7 @@ export const PUT = withAuth(async (session, req: Request) => {
   // Construct absolute URL for Meta API
   const baseUrl = getEnv().APP_BASE_URL;
   const version = Date.now();
-  const logoUrl = `${baseUrl}/api/branding/template-image?org=${session.organizationId}&v=${version}`;
+  const logoUrl = `${baseUrl}/api/branding/${session.organizationId}/template-image.png?v=${version}`;
 
   const db = getDb();
   await db

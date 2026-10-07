@@ -16,17 +16,17 @@ function cabeceras(mime: string, cacheable: boolean): HeadersInit {
   };
 }
 
-export async function GET(req: Request) {
+export async function GET(req: Request, { params }: { params: Promise<{ orgId: string }> }) {
   const url = new URL(req.url);
   const cacheable = url.searchParams.has("v");
-  const org = url.searchParams.get("org");
+  const { orgId } = await params;
 
-  if (!org) {
+  if (!orgId) {
     return new Response("Missing org", { status: 400 });
   }
 
   try {
-    const buf = await readMediaFile(org, TEMPLATE_IMAGE_ASSET);
+    const buf = await readMediaFile(orgId, TEMPLATE_IMAGE_ASSET);
     const bytes = new Uint8Array(buf);
     const mime = sniffFaviconMime(bytes) || "application/octet-stream";
     return new Response(bytes, {

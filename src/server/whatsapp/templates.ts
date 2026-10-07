@@ -356,11 +356,19 @@ export async function sendTemplate(input: {
     );
   }
 
-  const components = buildTemplateComponents(
-    { body: template.body, header: template.header as { format: string } | null, buttons: template.buttons },
-    input.variables || {},
-    row.organization.logo
-  );
+  let components: Record<string, unknown>[];
+  try {
+    components = buildTemplateComponents(
+      { body: template.body, header: template.header as { format: string } | null, buttons: template.buttons },
+      input.variables || {},
+      row.organization.logo
+    );
+  } catch (err) {
+    if (err instanceof Error && err.message.includes("Debe configurar una imagen de plantillas en Ajustes")) {
+      throw new TemplateError("invalid", err.message);
+    }
+    throw err;
+  }
 
   const waMessageId = await callGraphSend(creds, {
     messaging_product: "whatsapp",
