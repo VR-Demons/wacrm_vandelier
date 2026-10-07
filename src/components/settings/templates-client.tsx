@@ -199,9 +199,8 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
       <CardHeader>
         <CardTitle>Nueva plantilla</CardTitle>
         <CardDescription>
-          Cuerpo con las variables que necesites: numéralas{" "}
-          <code>{"{{1}}"}</code>, <code>{"{{2}}"}</code>, <code>{"{{3}}"}</code>
-          … en orden y sin saltos. Se envía a aprobación de Meta al crearla.
+          Cuerpo con las variables que necesites: puedes asignarles un nombre como{" "}
+          <code>{"{{nombre}}"}</code> o <code>{"{{fecha}}"}</code>. Se envía a aprobación de Meta al crearla.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -249,7 +248,7 @@ function CreateForm({ onCreated }: { onCreated: () => void }) {
           <Textarea
             id="tpl-body"
             rows={3}
-            placeholder="Hola {{1}}, te confirmo tu sesión el {{2}} a las {{3}}."
+            placeholder="Hola {{nombre}}, te confirmo tu sesión el {{dia}} a las {{hora}}."
             value={body}
             onChange={(e) => setBody(e.target.value)}
           />

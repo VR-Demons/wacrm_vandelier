@@ -5,31 +5,35 @@
  */
 
 const VARIABLE_REGEX = /\{\{\s*(\d+)\s*\}\}/g;
+const NAMED_VARIABLE_REGEX = /\{\{\s*([a-zA-Z0-9_áéíóúñÁÉÍÓÚÑ\s]+)\s*\}\}/g;
 
-/** Máximo de parámetros posicionales por cuerpo que acepta Meta. */
+/** Máximo de parámetros por cuerpo que acepta Meta. */
 export const MAX_TEMPLATE_VARIABLES = 10;
 
-/** Índices distintos de {{n}} presentes en el cuerpo, ordenados. */
 function variableIndexes(body: string): number[] {
   const found = new Set<number>();
   for (const m of body.matchAll(VARIABLE_REGEX)) found.add(Number(m[1]));
   return [...found].sort((a, b) => a - b);
 }
 
-/**
- * Cuántos parámetros exige el cuerpo = el índice más alto. Con la numeración
- * validada (1..N sin saltos) equivale al número de variables distintas.
- */
 export function countVariables(body: string): number {
   const indexes = variableIndexes(body);
   return indexes.length ? indexes[indexes.length - 1]! : 0;
 }
 
 /**
- * Meta acepta varias variables por cuerpo, pero exige numeración posicional
- * contigua desde {{1}}: un salto ({{1}} y {{3}}) es rechazo seguro.
+ * Valida que si se usan números, sean contiguos.
+ * O si se usan nombres, que no pasen del máximo.
  */
 export function validateBodyVariables(body: string): string | null {
+  const names = extractNamedVariables(body);
+  if (names.length > 0) {
+    if (names.length > MAX_TEMPLATE_VARIABLES) {
+      return `El cuerpo admite hasta ${MAX_TEMPLATE_VARIABLES} variables`;
+    }
+    return null; // Named variables are converted automatically
+  }
+
   const indexes = variableIndexes(body);
   if (indexes.length === 0) return null;
   if (indexes.length > MAX_TEMPLATE_VARIABLES) {
@@ -41,6 +45,38 @@ export function validateBodyVariables(body: string): string | null {
     }
   }
   return null;
+}
+
+/** Extrae nombres de variables en el orden que aparecen por primera vez. */
+export function extractNamedVariables(body: string): string[] {
+  const names = new Set<string>();
+  for (const m of body.matchAll(NAMED_VARIABLE_REGEX)) {
+    const val = m[1]?.trim();
+    if (val && !/^\d+$/.test(val)) {
+      names.add(val);
+    }
+  }
+  return [...names];
+}
+
+/** Convierte un cuerpo con nombres a formato Meta {{1}} y genera el map. */
+export function processNamedVariables(body: string): { metaBody: string; variablesMap: Record<string, string> } {
+  const names = extractNamedVariables(body);
+  if (names.length === 0) return { metaBody: body, variablesMap: {} };
+
+  const variablesMap: Record<string, string> = {};
+  names.forEach((name, i) => {
+    variablesMap[`body_${i + 1}`] = name;
+  });
+
+  const metaBody = body.replace(NAMED_VARIABLE_REGEX, (match, val: string) => {
+    const trimmed = val.trim();
+    if (/^\d+$/.test(trimmed)) return match;
+    const index = names.indexOf(trimmed) + 1;
+    return `{{${index}}}`;
+  });
+
+  return { metaBody, variablesMap };
 }
 
 /** Sustituye {{n}} por `variables[n-1]` (vacío si no hay valor). */

@@ -3,6 +3,7 @@ import {
   countVariables,
   renderBody,
   validateBodyVariables,
+  processNamedVariables,
 } from "@/lib/templates";
 import { computeSyncDelta, mapMetaStatus } from "./templatesDelta";
 import { buildTemplateComponents } from "./templatePayload";
@@ -76,7 +77,9 @@ export async function createTemplate(
   organizationId: string,
   input: { name: string; language: string; category: string; body: string }
 ): Promise<TemplateRow> {
-  const variableError = validateBodyVariables(input.body);
+  const { metaBody, variablesMap } = processNamedVariables(input.body);
+
+  const variableError = validateBodyVariables(metaBody);
   if (variableError) throw new TemplateError("invalid", variableError);
 
   const creds = await getCredentialsByOrg(organizationId);
@@ -94,7 +97,7 @@ export async function createTemplate(
   if (!name) throw new TemplateError("invalid", "Nombre de plantilla inválido");
 
   // Meta pide un ejemplo por variable: si faltan, rechaza la plantilla.
-  const variableCount = countVariables(input.body);
+  const variableCount = countVariables(metaBody);
   const examples = Array.from(
     { length: variableCount },
     (_, i) => `ejemplo ${i + 1}`
@@ -113,7 +116,7 @@ export async function createTemplate(
           components: [
             {
               type: "BODY",
-              text: input.body,
+              text: metaBody,
               ...(variableCount > 0
                 ? { example: { body_text: [examples] } }
                 : {}),
@@ -146,7 +149,8 @@ export async function createTemplate(
       name,
       language: input.language,
       category: input.category,
-      body: input.body,
+      body: metaBody,
+      variablesMap,
       status: "pending",
       waTemplateId,
     })
@@ -158,7 +162,8 @@ export async function createTemplate(
       ],
       set: {
         category: input.category,
-        body: input.body,
+        body: metaBody,
+        variablesMap,
         status: "pending",
         rejectionReason: null,
         waTemplateId,
