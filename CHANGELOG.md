@@ -1,4 +1,4 @@
-﻿# Cambios
+# Cambios
 
 QuÃ© trae cada versiÃ³n de Vocero CRM y quÃ© hacer para actualizar. La versiÃ³n
 sigue el SemVer del [README](README.md#versiones): una menor trae funciones
@@ -12,6 +12,9 @@ imagen `ghcr.io/kevinrivm/vocero-crm:X.Y.Z`.
   - Eliminar conversaciones o mensajes individuales directamente desde la bandeja.
   - Eliminar contactos específicos desde su menú (borrando también sus leads y conversaciones).
   - Eliminación masiva de todos los contactos (y sus datos relacionados) desde Configuración -> Marca, en la nueva 'Zona de peligro'.
+- **Bandeja / Detalles:**
+  - Se oculta la sección «IA en esta conversación», estado de pausa y avisos de configuración si la configuración principal del agente de IA está apagada o no lista para responder.
+  - El botón «Eliminar conversación» se reubicó al final del panel de detalles (debajo de Notas) en su propia sección delimitada.
 
 ## 1.4.0 â€” 2026-09-XX
 
