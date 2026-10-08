@@ -83,6 +83,7 @@ export const organization = pgTable("organization", {
   logo: text("logo"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   metadata: text("metadata"),
+  outboxDelayLimit: integer("outbox_delay_limit").notNull().default(1000),
 });
 
 export const member = pgTable("member", {
@@ -454,7 +455,7 @@ export const message = pgTable(
      * queda el default y la UI lo ignora.
      */
     origin: text("origin", {
-      enum: ["ai", "operator", "manual", "template"],
+      enum: ["ai", "operator", "manual", "template", "api", "bot"],
     })
       .notNull()
       .default("operator"),
@@ -1097,3 +1098,27 @@ export const capiSettings = pgTable(
   },
   (t) => [uniqueIndex("capi_settings_org_uq").on(t.organizationId)]
 );
+
+export const apiKey = pgTable('api_key', {
+  id: text('id').primaryKey(),
+  organizationId: text('organization_id')
+    .notNull()
+    .references(() => organization.id, { onDelete: 'cascade' }),
+  keyHash: text('key_hash').notNull().unique(),
+  prefix: text('prefix').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  lastUsedAt: timestamp('last_used_at'),
+});
+
+export const outboxMessage = pgTable('outbox_message', {
+  id: text('id').primaryKey(),
+  organizationId: text('organization_id')
+    .notNull()
+    .references(() => organization.id, { onDelete: 'cascade' }),
+  payload: jsonb('payload').notNull(),
+  status: text('status', { enum: ['pending', 'processing', 'sent', 'failed'] }).notNull().default('pending'),
+  error: text('error'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  scheduledFor: timestamp('scheduled_for').notNull().defaultNow(),
+});
+
