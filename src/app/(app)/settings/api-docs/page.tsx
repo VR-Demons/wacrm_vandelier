@@ -1,6 +1,5 @@
 import React from "react";
 import type { Metadata } from "next";
-import { Link } from "lucide-react";
 import { Mermaid } from "@/components/mermaid";
 
 export const metadata: Metadata = {
@@ -56,7 +55,7 @@ export default function ApiDocsPage() {
         <div className="rounded-md bg-stone-900 p-4">
           <pre className="overflow-x-auto text-sm text-stone-300">
             <code>
-              curl -H "x-api-key: YOUR_API_KEY" https://your-domain.com/api/public/v1/contacts
+              {`curl -H "x-api-key: YOUR_API_KEY" https://your-domain.com/api/public/v1/contacts`}
             </code>
           </pre>
         </div>
@@ -99,7 +98,7 @@ export default function ApiDocsPage() {
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-xl font-semibold tracking-tight">2. Pipeline State Updates</h2>
         <p className="text-text-2">
-          Allows updating the pipeline state for a contact, bypassing strict requirements such as <code>lossReason</code> (which defaults to "otro" when transitioning to a loss state if missing).
+          Allows updating the pipeline state for a contact, bypassing strict requirements such as <code>lossReason</code> (which defaults to &quot;otro&quot; when transitioning to a loss state if missing).
         </p>
         
         <div className="space-y-3 pt-2">
@@ -136,7 +135,7 @@ export default function ApiDocsPage() {
   https://your-domain.com/api/public/v1/messages`}</code>
             </pre>
           </div>
-          <p className="text-sm text-text-3 italic">Note: This endpoint returns an immediate 202 Accepted or 200 OK response with queue IDs, and sets the sender origin to "api" or "bot".</p>
+          <p className="text-sm text-text-3 italic">Note: This endpoint returns an immediate 202 Accepted or 200 OK response with queue IDs, and sets the sender origin to &quot;api&quot; or &quot;bot&quot;.</p>
         </div>
       </section>
 
