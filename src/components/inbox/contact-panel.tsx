@@ -76,6 +76,9 @@ export function ContactPanel({
 
   const aiConfigured = brain?.embedded.configured ?? false;
   const agentReady = brain?.embedded.answering ?? false;
+  // Configuración principal de IA (solo administrador en /agent). Si está apagada
+  // o no está lista para responder, se oculta la sección de IA de la conversación en la bandeja.
+  const mainAiEnabled = (brain?.embedded.enabled && brain?.embedded.answering) ?? false;
   // Hasta donde se sabe, contesta: activo y, si hay /health, en línea.
   const externalActive = brain ? externalAnswering(brain) : false;
   // El control es la FUENTE DE VERDAD de la conversación: el agente in-process
@@ -219,7 +222,7 @@ export function ContactPanel({
             </div>
           </div>
 
-          {conversation.handoffAt && (
+          {mainAiEnabled && conversation.handoffAt && (
             <div className="mt-3 rounded-md border border-warning-soft bg-warning-tint p-3">
               <p className="flex items-center gap-1.5 text-[13px] font-medium text-warning-text">
                 <UserRound className="h-4 w-4" strokeWidth={1.7} /> Atención humana
@@ -239,113 +242,103 @@ export function ContactPanel({
             </div>
           )}
 
-          <div className="mt-3 rounded-md border bg-subtle px-3 py-2.5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[13px] font-medium">IA en esta conversación</p>
-                <p className="text-[11px] text-text-3">
-                  {conversation.handoffAt
-                    ? "En pausa · atención humana"
-                    : !conversation.aiEnabled
-                      ? "En pausa"
-                      : agentReady || externalActive
-                        ? "Respondiendo"
-                        : "Activada"}
-                </p>
-              </div>
-              <Switch
-                size="sm"
-                checked={aiActive}
-                label="IA en esta conversación"
-                onCheckedChange={() => {
-                  void onPatchConversation({
-                    aiEnabled: !conversation.aiEnabled,
-                  });
-                }}
-              />
-            </div>
-
-            {brain?.warning === "doble_respuesta" ? (
-              <div className="mt-2.5 flex items-start gap-2 rounded-md border border-danger-soft bg-danger-tint p-2.5">
-                <AlertTriangle
-                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger-text"
-                  strokeWidth={1.7}
-                />
-                <div className="text-[11px] leading-relaxed text-danger-text">
-                  <p>
-                    <span className="font-semibold">Doble respuesta:</span> el agente
-                    incluido y tu cerebro externo contestan a la vez.
+          {mainAiEnabled && (
+            <div className="mt-3 rounded-md border bg-subtle px-3 py-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[13px] font-medium">IA en esta conversación</p>
+                  <p className="text-[11px] text-text-3">
+                    {conversation.handoffAt
+                      ? "En pausa · atención humana"
+                      : !conversation.aiEnabled
+                        ? "En pausa"
+                        : agentReady || externalActive
+                          ? "Respondiendo"
+                          : "Activada"}
                   </p>
-                  <Link
-                    href="/agent"
-                    className="mt-1 inline-block font-medium underline underline-offset-2"
-                  >
-                    Revisar en Agente →
-                  </Link>
                 </div>
-              </div>
-            ) : brain && !agentReady && externalActive ? (
-              <p className="mt-2 flex items-center gap-1.5 text-[11px] text-text-3">
-                <Cable className="h-3.5 w-3.5 shrink-0" strokeWidth={1.7} />
-                {externalAnswerLabel(brain)}
-              </p>
-            ) : brain && !agentReady && externalDown(brain) ? (
-              <div className="mt-2.5 flex items-start gap-2 rounded-md border border-warning-soft bg-warning-tint p-2.5">
-                <Cable
-                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning-text"
-                  strokeWidth={1.7}
+                <Switch
+                  size="sm"
+                  checked={aiActive}
+                  label="IA en esta conversación"
+                  onCheckedChange={() => {
+                    void onPatchConversation({
+                      aiEnabled: !conversation.aiEnabled,
+                    });
+                  }}
                 />
-                <p className="text-[11px] leading-relaxed text-warning-text">
-                  Tu cerebro externo no está en línea: nadie contesta en automático
-                  hasta que vuelva.
-                  <Link
-                    href="/agent"
-                    className="ml-1 whitespace-nowrap font-medium text-brand-text underline underline-offset-2 hover:text-brand"
-                  >
-                    Ver en Agente →
-                  </Link>
+              </div>
+
+              {brain?.warning === "doble_respuesta" ? (
+                <div className="mt-2.5 flex items-start gap-2 rounded-md border border-danger-soft bg-danger-tint p-2.5">
+                  <AlertTriangle
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-danger-text"
+                    strokeWidth={1.7}
+                  />
+                  <div className="text-[11px] leading-relaxed text-danger-text">
+                    <p>
+                      <span className="font-semibold">Doble respuesta:</span> el agente
+                      incluido y tu cerebro externo contestan a la vez.
+                    </p>
+                    <Link
+                      href="/agent"
+                      className="mt-1 inline-block font-medium underline underline-offset-2"
+                    >
+                      Revisar en Agente →
+                    </Link>
+                  </div>
+                </div>
+              ) : brain && !agentReady && externalActive ? (
+                <p className="mt-2 flex items-center gap-1.5 text-[11px] text-text-3">
+                  <Cable className="h-3.5 w-3.5 shrink-0" strokeWidth={1.7} />
+                  {externalAnswerLabel(brain)}
                 </p>
-              </div>
-            ) : brain && !agentReady && (
-              <div className="mt-2.5 flex items-start gap-2 rounded-md border border-warning-soft bg-warning-tint p-2.5">
-                <Sparkles
-                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning-text"
-                  strokeWidth={1.7}
-                />
-                <p className="text-[11px] leading-relaxed text-warning-text">
-                  {aiConfigured
-                    ? "El agente de Vocero no responde por su cuenta. Configura lo básico y enciéndelo (o conecta tu propio bot por la API)."
-                    : "Falta la clave de IA de la instancia (OPENROUTER_API_TOKEN) para que el agente responda, o conecta tu propio bot por la API."}
-                  {aiConfigured && (
+              ) : brain && !agentReady && externalDown(brain) ? (
+                <div className="mt-2.5 flex items-start gap-2 rounded-md border border-warning-soft bg-warning-tint p-2.5">
+                  <Cable
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning-text"
+                    strokeWidth={1.7}
+                  />
+                  <p className="text-[11px] leading-relaxed text-warning-text">
+                    Tu cerebro externo no está en línea: nadie contesta en automático
+                    hasta que vuelva.
                     <Link
                       href="/agent"
                       className="ml-1 whitespace-nowrap font-medium text-brand-text underline underline-offset-2 hover:text-brand"
                     >
-                      Configurar agente →
+                      Ver en Agente →
                     </Link>
-                  )}
-                </p>
-              </div>
-            )}
-          </div>
+                  </p>
+                </div>
+              ) : brain && !agentReady && (
+                <div className="mt-2.5 flex items-start gap-2 rounded-md border border-warning-soft bg-warning-tint p-2.5">
+                  <Sparkles
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 text-warning-text"
+                    strokeWidth={1.7}
+                  />
+                  <p className="text-[11px] leading-relaxed text-warning-text">
+                    {aiConfigured
+                      ? "El agente de Vocero no responde por su cuenta. Configura lo básico y enciéndelo (o conecta tu propio bot por la API)."
+                      : "Falta la clave de IA de la instancia (OPENROUTER_API_TOKEN) para que el agente responda, o conecta tu propio bot por la API."}
+                    {aiConfigured && (
+                      <Link
+                        href="/agent"
+                        className="ml-1 whitespace-nowrap font-medium text-brand-text underline underline-offset-2 hover:text-brand"
+                      >
+                        Configurar agente →
+                      </Link>
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
 
           {anuncio && (
             <div className="mt-3">
               <AnuncioOrigen anuncio={anuncio} />
             </div>
           )}
-
-          <div className="mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full text-danger-text hover:bg-danger-tint hover:text-danger-text"
-              onClick={() => setDeletingConv(true)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Eliminar conversación
-            </Button>
-          </div>
         </section>
 
         {deletingConv && (
@@ -453,6 +446,19 @@ export function ContactPanel({
             onClick={() => void saveNotes()}
           >
             {savingNotes ? "Guardando…" : "Guardar notas"}
+          </Button>
+        </section>
+
+        {/* Peligro: eliminar conversación */}
+        <section className="border-t p-4 pb-6">
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full text-danger-text hover:bg-danger-tint hover:text-danger-text"
+            onClick={() => setDeletingConv(true)}
+          >
+            <Trash2 className="mr-2 h-4 w-4" />
+            Eliminar conversación
           </Button>
         </section>
       </div>
