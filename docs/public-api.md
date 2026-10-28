@@ -439,6 +439,61 @@ curl -X POST https://crm.vandelierai.com/api/public/v1/n8n/templates \
 
 ---
 
+### 6. List WhatsApp Templates & Required Parameters
+
+Retrieve all WhatsApp templates registered in your organization, along with their approval status, body text, required variable placeholders, human-readable variable labels, and a pre-built example payload ready for `POST /api/public/v1/messages`.
+
+* **Method**: `GET`
+* **Path**: `/api/public/v1/templates`
+* **Headers**:
+  * `x-api-key: <API_KEY>`
+
+#### Example Request
+```bash
+curl -X GET https://crm.vandelierai.com/api/public/v1/templates \
+  -H "x-api-key: sk_live_..."
+```
+
+#### Response (`200 OK`)
+```json
+{
+  "success": true,
+  "count": 1,
+  "templates": [
+    {
+      "id": "tpl_01HXYZ...",
+      "name": "recordatorio_pago",
+      "language": "es_MX",
+      "category": "UTILITY",
+      "status": "approved",
+      "body": "Hola {{1}}, tu pago de {{2}} vence el {{3}}.",
+      "header": null,
+      "footer": "Gracias por su preferencia",
+      "buttons": null,
+      "requiredVariables": ["1", "2", "3"],
+      "variablesMap": {
+        "body_1": "Nombre del Cliente",
+        "body_2": "Monto",
+        "body_3": "Fecha de Vencimiento"
+      },
+      "examplePayload": {
+        "phone": "+5215512345678",
+        "template": "recordatorio_pago",
+        "language": "es_MX",
+        "variables": {
+          "1": "[Nombre del Cliente]",
+          "2": "[Monto]",
+          "3": "[Fecha de Vencimiento]"
+        },
+        "immediate": true
+      }
+    }
+  ]
+}
+```
+
+---
+
 ## Outbox Processing & Rate Throttling
 
 Outbound messages created by `/messages` and `/n8n/templates` are stored in the `outbox_message` table with status `"pending"`.
