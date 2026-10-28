@@ -22,6 +22,42 @@ describe("buildTemplateComponents", () => {
     ]);
   });
 
+  it("sanitizes newlines in body parameter values to prevent Meta error 132018", () => {
+    const template = {
+      body: "Items: {{lista_items}}"
+    };
+    const result = buildTemplateComponents(template, {
+      lista_items: "Item 1\nItem 2\r\nItem 3"
+    });
+
+    expect(result).toEqual([
+      {
+        type: "body",
+        parameters: [
+          { type: "text", parameter_name: "lista_items", text: "Item 1 — Item 2 — Item 3" }
+        ]
+      }
+    ]);
+  });
+
+  it("caps parameter_name to at most 20 characters for Meta API compliance", () => {
+    const template = {
+      body: "Ref: {{referencias_combinadas}}"
+    };
+    const result = buildTemplateComponents(template, {
+      referencias_combinadas: "REF-001 / REF-002"
+    });
+
+    expect(result).toEqual([
+      {
+        type: "body",
+        parameters: [
+          { type: "text", parameter_name: "referencias_combinad", text: "REF-001 / REF-002" }
+        ]
+      }
+    ]);
+  });
+
   it("builds payload with header text variable", () => {
     const template = {
       header: { format: "TEXT", text: "Alert {{1}}" },

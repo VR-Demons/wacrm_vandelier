@@ -299,7 +299,14 @@ export async function sendTemplate(input: {
 
   const bodyVars = extractAllVariables(template.body);
   for (const varName of bodyVars) {
-    const val = (input.variables?.[`body_${varName}`] ?? input.variables?.[varName] ?? "").trim();
+    const val = (
+      input.variables?.[`body_${varName}`] ??
+      input.variables?.[varName] ??
+      (varName.length > 20
+        ? input.variables?.[`body_${varName.slice(0, 20)}`] ?? input.variables?.[varName.slice(0, 20)]
+        : undefined) ??
+      ""
+    ).trim();
     if (!val) {
       throw new TemplateError(
         "invalid",
