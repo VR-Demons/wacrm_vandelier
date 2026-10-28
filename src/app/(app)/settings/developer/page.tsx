@@ -4,6 +4,8 @@ import { organization, apiKey } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { DeveloperSettingsClient } from "./client";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Desarrollador | Settings",
 };
@@ -12,15 +14,32 @@ export default async function DeveloperSettingsPage() {
   const session = await requireSession();
   const db = getDb();
 
-  const [org] = await db
-    .select({ outboxDelayLimit: organization.outboxDelayLimit })
-    .from(organization)
-    .where(eq(organization.id, session.organizationId));
+  let outboxDelayLimit = 1000;
+  let initialPrefix: string | null = null;
 
-  const [key] = await db
-    .select({ prefix: apiKey.prefix })
-    .from(apiKey)
-    .where(eq(apiKey.organizationId, session.organizationId));
+  try {
+    const [org] = await db
+      .select({ outboxDelayLimit: organization.outboxDelayLimit })
+      .from(organization)
+      .where(eq(organization.id, session.organizationId));
+    if (org?.outboxDelayLimit !== undefined) {
+      outboxDelayLimit = org.outboxDelayLimit;
+    }
+  } catch (err) {
+    console.error("[settings/developer] Error loading organization settings:", err);
+  }
+
+  try {
+    const [key] = await db
+      .select({ prefix: apiKey.prefix })
+      .from(apiKey)
+      .where(eq(apiKey.organizationId, session.organizationId));
+    if (key?.prefix) {
+      initialPrefix = key.prefix;
+    }
+  } catch (err) {
+    console.error("[settings/developer] Error loading api key:", err);
+  }
 
   return (
     <div className="max-w-2xl">
@@ -31,8 +50,8 @@ export default async function DeveloperSettingsPage() {
         </p>
       </div>
       <DeveloperSettingsClient
-        initialDelay={org?.outboxDelayLimit ?? 1000}
-        initialPrefix={key?.prefix ?? null}
+        initialDelay={outboxDelayLimit}
+        initialPrefix={initialPrefix}
         organizationId={session.organizationId}
       />
     </div>

@@ -127,6 +127,13 @@
       "when": 1791408375581,
       "tag": "0017_easy_spot",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793222885158,
+      "tag": "0018_mysterious_banshee",
+      "breakpoints": true
     }
   ]
 }
