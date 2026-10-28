@@ -18,10 +18,32 @@ vi.mock("../../src/server/inbox/ingest", () => ({
   }),
 }));
 
+vi.mock("../../src/server/whatsapp/templates", () => ({
+  sendTemplate: vi.fn().mockResolvedValue({ messageId: "msg_tpl_123" }),
+  TemplateError: class TemplateError extends Error {
+    code = "invalid";
+  },
+}));
+
 vi.mock("../../src/lib/db", () => {
   const mockDb = {
     insert: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
+    select: vi.fn(() => ({
+      from: vi.fn(() => ({
+        where: vi.fn(() => ({
+          limit: vi.fn().mockResolvedValue([]),
+        })),
+      })),
+    })),
+    query: {
+      template: {
+        findFirst: vi.fn(),
+      },
+      conversation: {
+        findFirst: vi.fn(),
+      },
+    },
   };
   return { getDb: () => mockDb };
 });
@@ -86,5 +108,60 @@ describe("POST /api/public/v1/messages", () => {
     const data = await res.json();
     expect(data.success).toBe(true);
     expect(db.insert).toHaveBeenCalled();
+  });
+
+  it("queues template message into outbox", async () => {
+    vi.mocked(auth.validateRequestApiKey).mockResolvedValue({ organizationId: "org_1" });
+    db.query.template.findFirst.mockResolvedValue({
+      id: "tpl_123",
+      name: "aviso_pago",
+      status: "approved",
+      language: "es_MX",
+    });
+
+    const req = new Request("http://localhost/api/public/v1/messages", {
+      method: "POST",
+      body: JSON.stringify({
+        phone: "+5215512345678",
+        template: "aviso_pago",
+        variables: { "1": "Jane", "2": "$1,200.00" },
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.queueIds).toHaveLength(1);
+    expect(db.insert).toHaveBeenCalled();
+  });
+
+  it("sends template message immediately when immediate is true", async () => {
+    vi.mocked(auth.validateRequestApiKey).mockResolvedValue({ organizationId: "org_1" });
+    db.query.template.findFirst.mockResolvedValue({
+      id: "tpl_123",
+      name: "aviso_pago",
+      status: "approved",
+      language: "es_MX",
+    });
+    db.query.conversation.findFirst.mockResolvedValue({
+      id: "conv_123",
+    });
+
+    const req = new Request("http://localhost/api/public/v1/messages", {
+      method: "POST",
+      body: JSON.stringify({
+        phone: "+5215512345678",
+        template: "aviso_pago",
+        variables: ["Jane", "$1,200.00"],
+        immediate: true,
+      }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(data.sentMessageIds).toEqual(["msg_tpl_123"]);
   });
 });

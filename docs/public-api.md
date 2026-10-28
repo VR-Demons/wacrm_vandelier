@@ -222,14 +222,42 @@ Sends or queues outbound WhatsApp text messages to a customer. When sent, the me
 #### Request Payload
 Accepts a single message or an array of message objects. You can identify the recipient either by their **phone number** (which automatically resolves/creates the contact and conversation) or by their internal **contactId**.
 
+##### Sending Plain Text:
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `phone` / `number` | `string` | **Yes** (or `contactId`) | Recipient's phone number with country code (e.g. `+5215512345678`). |
 | `contactId` | `string` | **Yes** (or `phone`) | Existing contact ID (`ct_...`). |
-| `message` / `text` | `string` | **Yes** | Text message content to send. |
-| `immediate` | `boolean` | No | If `true`, sends the message immediately to Meta Graph API without waiting for the background cron. If `false` (default), enqueues into the outbox. |
+| `message` / `text` | `string` | **Yes** | Text message content to send (requires active 24h window). |
+| `immediate` | `boolean` | No | If `true`, sends immediately to Meta Graph API. If `false` (default), enqueues in outbox. |
 
-#### Example: Send by Phone Number (Immediate)
+##### Sending WhatsApp Templates:
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `phone` / `number` | `string` | **Yes** (or `contactId`) | Recipient's phone number with country code. |
+| `contactId` | `string` | **Yes** (or `phone`) | Existing contact ID. |
+| `template` / `templateName` / `templateId` | `string` | **Yes** | Approved Meta template name or ID. |
+| `variables` / `parameters` | `object` \| `array` | No | Template variables. Accepts object (`{"1": "Jane", "2": "$1,500"}`) or ordered array (`["Jane", "$1,500"]`). |
+| `language` | `string` | No | Language code (e.g. `es_MX`, default `es_MX` or template's language). |
+| `immediate` | `boolean` | No | If `true`, sends immediately to Meta Graph API. If `false` (default), enqueues in outbox. |
+
+#### Example: Send WhatsApp Template with Parameters (Immediate)
+```bash
+curl -X POST https://crm.vandelierai.com/api/public/v1/messages \
+  -H "x-api-key: sk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "+5215512345678",
+    "template": "recordatorio_pago",
+    "variables": {
+      "1": "Jane Doe",
+      "2": "$1,500.00",
+      "3": "15 de Noviembre"
+    },
+    "immediate": true
+  }'
+```
+
+#### Example: Send Plain Text Message (Immediate)
 ```bash
 curl -X POST https://crm.vandelierai.com/api/public/v1/messages \
   -H "x-api-key: sk_live_..." \
@@ -241,14 +269,15 @@ curl -X POST https://crm.vandelierai.com/api/public/v1/messages \
   }'
 ```
 
-#### Example: Queue in Outbox
+#### Example: Queue Template in Outbox
 ```bash
 curl -X POST https://crm.vandelierai.com/api/public/v1/messages \
   -H "x-api-key: sk_live_..." \
   -H "Content-Type: application/json" \
   -d '{
     "phone": "+5215512345678",
-    "message": "Hola Jane, este mensaje se enviará por la cola en segundo plano."
+    "template": "bienvenida",
+    "variables": ["Jane Doe"]
   }'
 ```
 

@@ -7,6 +7,8 @@ import { getOrCreateConversation } from "../../../../../../server/inbox/ingest";
 import { normalizeMx } from "../../../../../../lib/meta/client";
 import { upsertContactFolios } from "../../../../../../server/folios";
 import { moveLeadToStage } from "../../../../../../server/leads/stage-history";
+import { sendTemplate, TemplateError } from "../../../../../../server/whatsapp/templates";
+import { SendError } from "../../../../../../server/inbox/send";
 import { randomUUID } from "crypto";
 
 export async function POST(req: Request) {
@@ -18,22 +20,31 @@ export async function POST(req: Request) {
   const { organizationId } = auth;
   const db = getDb();
   
-  let body;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let body: any;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const records = body.records;
-  if (!Array.isArray(records)) {
-    return NextResponse.json({ error: "records must be an array" }, { status: 400 });
+  const records = Array.isArray(body)
+    ? body
+    : Array.isArray(body?.records)
+    ? body.records
+    : body && typeof body === "object"
+    ? [body]
+    : [];
+
+  if (records.length === 0) {
+    return NextResponse.json({ error: "Payload must be a record or an array of records" }, { status: 400 });
   }
 
   let successCount = 0;
   let errorCount = 0;
   const errors = [];
   const queueIds = [];
+  const sentMessageIds = [];
 
   for (const record of records) {
     try {
@@ -51,7 +62,7 @@ export async function POST(req: Request) {
       };
 
       const { contact } = await getOrCreateContactByIdentity(organizationId, resolved);
-      await getOrCreateConversation(organizationId, contact.id);
+      const conv = await getOrCreateConversation(organizationId, contact.id);
 
       // Upsert Folio
       if (record.folio !== undefined) {
@@ -59,16 +70,18 @@ export async function POST(req: Request) {
       }
 
       // Find template
+      const templateName = record.templateName ?? record.template;
+      const templateLang = record.templateLanguage ?? record.language ?? "es_MX";
       const templates = await db.select().from(schema.template).where(
         and(
           eq(schema.template.organizationId, organizationId),
-          eq(schema.template.name, record.templateName),
-          eq(schema.template.language, record.templateLanguage ?? "es_MX")
+          eq(schema.template.name, templateName),
+          eq(schema.template.language, templateLang)
         )
       ).limit(1);
       const template = templates[0];
       if (!template) {
-        throw new Error(`Template not found: ${record.templateName}`);
+        throw new Error(`Template not found: ${templateName}`);
       }
 
       // Move Lead to stage if template has pipelineStageId mapped
@@ -84,29 +97,46 @@ export async function POST(req: Request) {
              organizationId,
              leadId: leads[0].id,
              toStageId: template.pipelineStageId,
-             source: "sistema" // changed from "bot" to "sistema" based on standard types
+             source: "sistema"
            });
          }
       }
 
-      // Queue message
-      const outboxId = randomUUID();
-      await db.insert(schema.outboxMessage).values({
-        id: outboxId,
-        organizationId,
-        type: "template",
-        payload: {
-          to: contact.id,
+      const variables = record.templateVariables ?? record.variables ?? record.parameters ?? {};
+
+      if (record.immediate === true) {
+        const result = await sendTemplate({
+          organizationId,
+          conversationId: conv.id,
           templateId: template.id,
-          variables: record.templateVariables ?? {}
-        },
-        status: "pending"
-      });
-      queueIds.push(outboxId);
-      successCount++;
+          variables,
+        });
+        sentMessageIds.push(result.messageId);
+        successCount++;
+      } else {
+        // Queue message
+        const outboxId = randomUUID();
+        await db.insert(schema.outboxMessage).values({
+          id: outboxId,
+          organizationId,
+          type: "template",
+          payload: {
+            to: contact.id,
+            templateId: template.id,
+            variables
+          },
+          status: "pending"
+        });
+        queueIds.push(outboxId);
+        successCount++;
+      }
     } catch (e) {
       errorCount++;
-      errors.push({ payload: record, error: (e as Error).message });
+      const message =
+        e instanceof SendError || e instanceof TemplateError
+          ? `${e.code}: ${e.message}`
+          : (e as Error).message;
+      errors.push({ payload: record, error: message });
     }
   }
 
@@ -117,7 +147,8 @@ export async function POST(req: Request) {
       success: successCount,
       error: errorCount,
     },
-    queueIds,
+    queueIds: queueIds.length > 0 ? queueIds : undefined,
+    sentMessageIds: sentMessageIds.length > 0 ? sentMessageIds : undefined,
     errors: errors.length > 0 ? errors : undefined,
   });
 }
