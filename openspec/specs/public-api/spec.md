@@ -53,7 +53,7 @@ The system MUST provide an endpoint to update pipeline states for single or mult
 
 ### Requirement: Message Queuing
 
-The system MUST queue bulk messages asynchronously via an outbox pattern to avoid execution and rate limits.
+The system MUST queue bulk messages (including text and template messages) asynchronously via an outbox pattern to avoid execution and rate limits.
 
 #### Scenario: Queuing Messages for Delivery
 
@@ -69,4 +69,25 @@ The system MUST queue bulk messages asynchronously via an outbox pattern to avoi
 - WHEN the background cron job runs
 - THEN the system MUST process the queue sequentially respecting configured rate limits and delays
 - AND update the status to `sent` or `failed` accordingly
+- AND dispatch template messages (`type: "template"`) via Meta's template API
+
+### Requirement: n8n Template Endpoint
+
+The system MUST provide a specialized public API endpoint (`api/public/v1/n8n/templates`) for n8n to batch process WhatsApp templates, handling contact creation, folio linkage, pipeline progression, and queueing.
+
+#### Scenario: Valid n8n Template Payload
+
+- GIVEN a valid API key
+- WHEN a valid n8n payload (with contacts, folios, and templates) is submitted
+- THEN the system MUST upsert the contacts and folios
+- AND advance the pipeline stage using `stage-history.ts` if a mapping exists
+- AND enqueue the messages as `type: "template"` in the outbox
+- AND return a success response
+
+#### Scenario: Missing Template Match
+
+- GIVEN a valid API key
+- WHEN an n8n payload references a template name that does not exist in the database
+- THEN the system MUST fail gracefully for that record without crashing the batch
+- AND skip queueing the message for the missing template
 </public-api Specification>

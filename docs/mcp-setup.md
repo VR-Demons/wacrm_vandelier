@@ -62,5 +62,6 @@ Copia las entradas que necesites de `.mcp.json.example` a `.mcp.json`. Formato:
 | GitHub | Crear issues desde `tasks.md`, gestionar PRs |
 | Postgres/SQLite | Inspeccionar la BD durante el desarrollo |
 | Filesystem | Acceso acotado a rutas fuera del repo (úsalo con cuidado) |
+| Postman | Inspeccionar colecciones, especificaciones de APIs y entornos |
 
 Añade cualquier otro según tu nicho (un MCP de pagos, de tu proveedor de mensajería, etc.).

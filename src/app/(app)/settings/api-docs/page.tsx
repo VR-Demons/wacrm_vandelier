@@ -172,6 +172,43 @@ export default function ApiDocsPage() {
         </div>
       </section>
 
+      {/* Template & Pipeline Automation (n8n/Automations) */}
+      <section className="space-y-4">
+        <h2 className="border-b pb-2 text-xl font-semibold tracking-tight">5. Automated Template & Pipeline Dispatch</h2>
+        <p className="text-text-2">
+          High-level endpoint designed for workflow engines (n8n, Zapier). In one call per record, it resolves/creates the contact, ensures a conversation exists, optionally attaches a folio, matches an approved WhatsApp template, advances the lead stage if configured, and queues the template message.
+        </p>
+        
+        <div className="space-y-3 pt-2">
+          <h3 className="font-semibold">Endpoint: <code className="rounded bg-accent px-1.5 py-0.5 font-mono text-sm text-brand-text">POST /api/public/v1/n8n/templates</code></h3>
+          <p className="text-sm font-medium">Template Automation Dispatch Example:</p>
+          <div className="rounded-md bg-stone-900 p-4">
+            <pre className="overflow-x-auto text-sm text-stone-300">
+              <code>{`curl -X POST \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "records": [
+      {
+        "phone": "+5215512345678",
+        "name": "Jane Doe",
+        "templateName": "recordatorio_pago",
+        "templateLanguage": "es_MX",
+        "templateVariables": {
+          "1": "Jane",
+          "2": "$1,500.00"
+        },
+        "folio": 10423,
+        "total": 1500.00
+      }
+    ]
+  }' \\
+  https://your-domain.com/api/public/v1/n8n/templates`}</code>
+            </pre>
+          </div>
+        </div>
+      </section>
+
       {/* n8n Integration */}
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-xl font-semibold tracking-tight">Integration Examples (n8n)</h2>

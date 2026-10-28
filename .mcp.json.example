@@ -13,6 +13,15 @@
       "env": {
         "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
       }
+    },
+
+    "postman": {
+      "command": "npx",
+      "args": ["-y", "@postman/postman-mcp-server"],
+      "env": {
+        "POSTMAN_API_KEY": "${POSTMAN_API_KEY}",
+        "POSTMAN_API_BASE_URL": "${POSTMAN_API_BASE_URL}"
+      }
     }
   }
 }

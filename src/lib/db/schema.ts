@@ -692,6 +692,9 @@ export const template = pgTable(
       .default("draft"),
     rejectionReason: text("rejection_reason"),
     waTemplateId: text("wa_template_id"),
+    pipelineStageId: text("pipeline_stage_id").references(() => pipelineStage.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -1115,6 +1118,7 @@ export const outboxMessage = pgTable('outbox_message', {
   organizationId: text('organization_id')
     .notNull()
     .references(() => organization.id, { onDelete: 'cascade' }),
+  type: text("type").notNull().default("text"),
   payload: jsonb('payload').notNull(),
   status: text('status', { enum: ['pending', 'processing', 'sent', 'failed'] }).notNull().default('pending'),
   error: text('error'),

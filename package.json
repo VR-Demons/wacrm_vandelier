@@ -44,6 +44,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@next/eslint-plugin-next": "^15.5.20",
+    "@postman/postman-mcp-server": "^2.14.0",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",

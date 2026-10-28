@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
-import type { TemplateDto } from "@/lib/types";
+import type { TemplateDto, StageDto } from "@/lib/types";
 import { countVariables, validateBodyVariables } from "@/lib/templates";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,15 +23,33 @@ const STATUS_BADGE: Record<
 
 export function TemplatesClient() {
   const [templates, setTemplates] = useState<TemplateDto[]>([]);
+  const [stages, setStages] = useState<StageDto[]>([]);
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
     const res = await fetch("/api/templates").catch(() => null);
-    if (!res?.ok) return;
-    const data = (await res.json()) as { templates: TemplateDto[] };
-    setTemplates(data.templates);
+    if (res?.ok) {
+      const data = (await res.json()) as { templates: TemplateDto[] };
+      setTemplates(data.templates);
+    }
+    const stagesRes = await fetch("/api/pipeline/stages").catch(() => null);
+    if (stagesRes?.ok) {
+      const data = (await stagesRes.json()) as { stages: StageDto[] };
+      setStages(data.stages);
+    }
   }, []);
+
+  const assignStage = async (templateId: string, stageId: string) => {
+    const res = await fetch(`/api/templates/${templateId}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pipelineStageId: stageId || null })
+    }).catch(() => null);
+    if (res?.ok) {
+      void refetch();
+    }
+  };
 
   /**
    * `silent`: sincronización automática al abrir la pantalla. Meta entrega
@@ -146,6 +164,21 @@ export function TemplatesClient() {
               <p className="mt-2 text-xs text-destructive">
                 Razón del rechazo: {t.rejectionReason}
               </p>
+            )}
+            {t.status === "approved" && (
+              <div className="mt-4 flex items-center justify-between border-t pt-3">
+                <span className="text-xs font-medium text-muted-foreground">Etapa de pipeline (webhook n8n)</span>
+                <select
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                  value={t.pipelineStageId ?? ""}
+                  onChange={(e) => void assignStage(t.id, e.target.value)}
+                >
+                  <option value="">Sin asignar</option>
+                  {stages.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
             )}
           </div>
         ))}

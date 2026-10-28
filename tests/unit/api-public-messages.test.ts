@@ -6,6 +6,18 @@ vi.mock("../../src/lib/auth/public-api", () => ({
   validateRequestApiKey: vi.fn(),
 }));
 
+vi.mock("../../src/server/inbox/identity", () => ({
+  getOrCreateContactByIdentity: vi.fn().mockResolvedValue({
+    contact: { id: "c_phone_123" },
+  }),
+}));
+
+vi.mock("../../src/server/inbox/ingest", () => ({
+  getOrCreateConversation: vi.fn().mockResolvedValue({
+    id: "conv_123",
+  }),
+}));
+
 vi.mock("../../src/lib/db", () => {
   const mockDb = {
     insert: vi.fn().mockReturnThis(),
@@ -60,5 +72,19 @@ describe("POST /api/public/v1/messages", () => {
     expect(data.success).toBe(true);
     expect(data.summary.total).toBe(2);
     expect(db.insert).toHaveBeenCalledTimes(2);
+  });
+
+  it("resolves phone number to contact and queues message", async () => {
+    vi.mocked(auth.validateRequestApiKey).mockResolvedValue({ organizationId: "org_1" });
+    const req = new Request("http://localhost/api/public/v1/messages", {
+      method: "POST",
+      body: JSON.stringify({ phone: "+5215512345678", message: "Hello by phone!" }),
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.success).toBe(true);
+    expect(db.insert).toHaveBeenCalled();
   });
 });

@@ -1,4 +1,5 @@
 allowBuilds:
+  '@postman/postman-mcp-server': false
   esbuild: true
   sharp: true
   unrs-resolver: true

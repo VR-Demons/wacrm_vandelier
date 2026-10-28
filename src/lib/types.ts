@@ -90,6 +90,7 @@ export type TemplateDto = {
   variablesMap?: Record<string, string> | null;
   status: "draft" | "pending" | "approved" | "rejected";
   rejectionReason: string | null;
+  pipelineStageId?: string | null;
 };
 
 export type StageDto = {

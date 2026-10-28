@@ -70,6 +70,7 @@ export function serializeTemplate(t: TemplateRow) {
     variablesMap: t.variablesMap as Record<string, string> | null,
     status: t.status,
     rejectionReason: t.rejectionReason,
+    pipelineStageId: t.pipelineStageId,
   };
 }
 

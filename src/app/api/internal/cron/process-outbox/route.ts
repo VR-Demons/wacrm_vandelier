@@ -3,6 +3,7 @@ import { getDb } from "../../../../../lib/db";
 import { outboxMessage, organization, conversation } from "../../../../../lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { sendText } from "../../../../../server/inbox/send";
+import { sendTemplate } from "../../../../../server/whatsapp/templates";
 
 export async function POST(req: Request) {
   const db = getDb();
@@ -53,11 +54,22 @@ export async function POST(req: Request) {
         throw new Error("Conversation not found for contact");
       }
 
-      await sendText({
-        conversationId: conv.id,
-        organizationId: msg.organizationId,
-        text: payload.text,
-      });
+      if (msg.type === "template") {
+        const payload = msg.payload as { to: string; templateId: string; variables: Record<string, string> };
+        await sendTemplate({
+          conversationId: conv.id,
+          organizationId: msg.organizationId,
+          templateId: payload.templateId,
+          variables: payload.variables,
+        });
+      } else {
+        const payload = msg.payload as { to: string; text: string };
+        await sendText({
+          conversationId: conv.id,
+          organizationId: msg.organizationId,
+          text: payload.text,
+        });
+      }
 
       await db
         .update(outboxMessage)
