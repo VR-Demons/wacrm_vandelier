@@ -544,7 +544,9 @@ export async function callGraphSend(
       if (err.status === 0 || err.status >= 500) {
         throw new SendError("meta_unavailable", "Meta no está disponible ahora");
       }
-      throw new SendError("meta_error", err.message);
+      const errorData = (err.details as { error?: { error_data?: { details?: string } } })?.error?.error_data;
+      const detailsMsg = errorData?.details ? `: ${errorData.details}` : "";
+      throw new SendError("meta_error", `${err.message}${detailsMsg}`);
     }
     throw err;
   }

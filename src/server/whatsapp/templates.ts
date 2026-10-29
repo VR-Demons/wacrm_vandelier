@@ -299,14 +299,13 @@ export async function sendTemplate(input: {
 
   const bodyVars = extractAllVariables(template.body);
   for (const varName of bodyVars) {
-    const val = (
-      input.variables?.[`body_${varName}`] ??
-      input.variables?.[varName] ??
-      (varName.length > 20
-        ? input.variables?.[`body_${varName.slice(0, 20)}`] ?? input.variables?.[varName.slice(0, 20)]
-        : undefined) ??
-      ""
-    ).trim();
+    if (!/^\d+$/.test(varName) && varName.length > 20) {
+      throw new TemplateError(
+        "invalid",
+        `La variable {{${varName}}} tiene ${varName.length} caracteres y excede el límite de 20 caracteres de Meta Cloud API. Por favor renómbrala a una longitud menor (ej. {{referencias}}) en el Administrador de WhatsApp de Meta y presiona Sincronizar en Ajustes.`
+      );
+    }
+    const val = (input.variables?.[`body_${varName}`] ?? input.variables?.[varName] ?? "").trim();
     if (!val) {
       throw new TemplateError(
         "invalid",

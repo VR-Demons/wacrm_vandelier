@@ -45,23 +45,14 @@ export function buildTemplateComponents(
   if (bodyVars.length > 0) {
     const bodyParams: Record<string, unknown>[] = [];
     for (const varName of bodyVars) {
-      const rawVal =
-        variables[`body_${varName}`] ||
-        variables[varName] ||
-        (varName.length > 20
-          ? variables[`body_${varName.slice(0, 20)}`] || variables[varName.slice(0, 20)]
-          : "") ||
-        "";
-
+      const rawVal = variables[`body_${varName}`] || variables[varName] || "";
       // Meta Cloud API strictly prohibits raw line breaks (\n, \r) in parameter values (#132018)
       const val = rawVal.replace(/[\r\n]+/g, " — ").trim();
 
       if (/^\d+$/.test(varName)) {
         bodyParams.push({ type: "text", text: val });
       } else {
-        // Meta parameter_name has a hard limit of at most 20 characters
-        const paramName = varName.length > 20 ? varName.slice(0, 20) : varName;
-        bodyParams.push({ type: "text", parameter_name: paramName, text: val });
+        bodyParams.push({ type: "text", parameter_name: varName, text: val });
       }
     }
     if (bodyParams.length > 0) {

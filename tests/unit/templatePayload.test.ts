@@ -40,19 +40,19 @@ describe("buildTemplateComponents", () => {
     ]);
   });
 
-  it("caps parameter_name to at most 20 characters for Meta API compliance", () => {
+  it("builds payload with named parameter_name for custom variables", () => {
     const template = {
-      body: "Ref: {{referencias_combinadas}}"
+      body: "Ref: {{referencias}}"
     };
     const result = buildTemplateComponents(template, {
-      referencias_combinadas: "REF-001 / REF-002"
+      referencias: "REF-001 / REF-002"
     });
 
     expect(result).toEqual([
       {
         type: "body",
         parameters: [
-          { type: "text", parameter_name: "referencias_combinad", text: "REF-001 / REF-002" }
+          { type: "text", parameter_name: "referencias", text: "REF-001 / REF-002" }
         ]
       }
     ]);

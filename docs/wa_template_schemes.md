@@ -113,11 +113,14 @@ Recordatorio preventivo para clientes individuales (Persona Física) que tienen 
 | Encabezado | `header_1` | URL pública de la imagen | `https://vrdemons.com/vandelier.png` |
 | Variable 1 | `nombre_contacto` | Nombre del cliente | `"Carlos Mendoza"` |
 | Variable 2 | `lista_operaciones` | Desglose de créditos (en 1 sola línea) | `"• Folio 101: $1,500.00 (vence 30/Oct) — • Folio 102: $2,300.00 (vence 02/Nov)"` |
-| Variable 3 | `referencias_combinadas` / `referencias_combinad` | Referencias asociadas (ver nota abajo) | `"REF-101 / REF-102"` |
+| Variable 3 | `referencias_combinadas` | Referencias asociadas (ver nota abajo) | `"REF-101 / REF-102"` |
 
 > [!WARNING]
-> **Atención al nombre de variable (Límite de 20 caracteres de Meta)**:
-> Meta Cloud API exige que todo `parameter_name` tenga **como máximo 20 caracteres**. El nombre original `referencias_combinadas` tiene 22 caracteres. El backend del CRM recorta automáticamente a 20 caracteres (`referencias_combinad`) para no ser rechazado por la API de Meta. Sin embargo, para evitar cualquier conflicto con el motor de plantillas de Meta, se recomienda editar esta plantilla en el Administrador de WhatsApp de Meta y nombrarla `{{referencias}}` (11 caracteres, igual que en `dia_pago_fisica_multi`).
+> **Acción requerida en Meta Business Suite (Límite de 20 caracteres de Meta)**:
+> El nombre de variable original `referencias_combinadas` tiene **22 caracteres**.
+> 1. Meta Cloud API rechaza nombres de más de 20 caracteres con el error: `Param template.components.parameters.parameter_name must be at most 20 characters long`.
+> 2. Si se recorta el nombre a 20 caracteres (`referencias_combinad`), Meta devuelve `(#100) Invalid parameter` porque la plantilla registrada en Meta no contiene esa variable truncada.
+> **Solución definitiva**: En el Administrador de WhatsApp de Meta (Business Suite), edita la plantilla `recordatorio_pago_fisica_multi`, renombra `{{referencias_combinadas}}` por `{{referencias}}` (11 caracteres, idéntico a `dia_pago_fisica_multi`), envía a aprobación (se aprueba en segundos/minutos para Utility) y presiona **Sincronizar** en el CRM (**Configuración → Plantillas**). Mientras tanto, puedes usar `dia_pago_fisica_multi` que ya tiene `{{referencias}}`.
 
 #### Payload Postman (`raw JSON`):
 ```json
@@ -291,11 +294,14 @@ Recordatorio preventivo previo al vencimiento para Personas Morales / Empresas c
 | Variable 1 | `nombre_contacto` | Representante o contacto | `"Lic. Sofia Herrera"` |
 | Variable 2 | `nombre_empresa` | Razón social | `"Logística y Cargas del Norte S.A. de C.V."` |
 | Variable 3 | `lista_operaciones` | Desglose de contratos (1 sola línea) | `"• Flotilla Unidad 01: $14,000.00 MXN — • Flotilla Unidad 02: $14,500.00 MXN"` |
-| Variable 4 | `referencias_combinadas` / `referencias_combinad` | Referencias de pago | `"FLOT-01 / FLOT-02"` |
+| Variable 4 | `referencias_combinadas` | Referencias de pago | `"FLOT-01 / FLOT-02"` |
 
 > [!WARNING]
-> **Atención al nombre de variable (Límite de 20 caracteres de Meta)**:
-> Meta Cloud API exige que todo `parameter_name` tenga **como máximo 20 caracteres**. El nombre original `referencias_combinadas` tiene 22 caracteres. El backend del CRM recorta automáticamente a 20 caracteres (`referencias_combinad`) para no ser rechazado por la API de Meta. Sin embargo, para evitar cualquier conflicto con el motor de plantillas de Meta, se recomienda editar esta plantilla en el Administrador de WhatsApp de Meta y nombrarla `{{referencias}}` (11 caracteres, igual que en `dia_pago_moral_multi`).
+> **Acción requerida en Meta Business Suite (Límite de 20 caracteres de Meta)**:
+> El nombre de variable original `referencias_combinadas` tiene **22 caracteres**.
+> 1. Meta Cloud API rechaza nombres de más de 20 caracteres con el error: `Param template.components.parameters.parameter_name must be at most 20 characters long`.
+> 2. Si se recorta el nombre a 20 caracteres (`referencias_combinad`), Meta devuelve `(#100) Invalid parameter` porque la plantilla registrada en Meta no contiene esa variable truncada.
+> **Solución definitiva**: En el Administrador de WhatsApp de Meta (Business Suite), edita la plantilla `recordatorio_pago_moral_multi`, renombra `{{referencias_combinadas}}` por `{{referencias}}` (11 caracteres, idéntico a `dia_pago_moral_multi`), envía a aprobación y presiona **Sincronizar** en el CRM (**Configuración → Plantillas**). Mientras tanto, puedes usar `dia_pago_moral_multi` que ya tiene `{{referencias}}`.
 
 #### Payload Postman (`raw JSON`):
 ```json
