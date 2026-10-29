@@ -503,9 +503,18 @@ Plantilla de prueba estándar provista por Meta para verificar que la integraci�
 * **Causa**: Meta prohíbe terminantemente incluir saltos de línea (`\n`, `\r`) o tabuladores dentro del valor de cualquier parámetro de texto (`text`). Enviar `\n` dentro de `lista_operaciones` o cualquier otra variable causa el rechazo inmediato de Meta con el código `132018`.
 * **Solución**: Enviar los valores en una **sola línea continua**, separando conceptos con guiones largos (`" — "`), plecas (`" | "`) o comas. El backend del CRM ahora también reemplaza de forma preventiva los saltos de línea por `" — "` para proteger las llamadas.
 
-### 2. `Param template.components.parameters.parameter_name must be at most 20 characters long.`
-* **Causa**: Meta Cloud API impone una restricción de esquema estricta: ningún nombre de variable (`parameter_name`) puede superar los **20 caracteres**. La variable `referencias_combinadas` tiene 22 caracteres.
-* **Solución**:
-  - A nivel backend, el CRM recorta a un máximo de 20 caracteres (`referencias_combinad`) de forma transparente.
-  - Para consistencia total con Meta WhatsApp Manager, se recomienda cambiar el nombre de la variable en Meta a `{{referencias}}` (11 caracteres), tal como ya está en `dia_pago_fisica_multi` y `dia_pago_moral_multi`.
+### 2. `Param template.components.parameters.parameter_name must be at most 20 characters long.` y `(#100) Invalid parameter`
+* **Causa**:
+  - Meta Cloud API (`POST /messages`) impone un límite estricto de esquema: ningún nombre de parámetro (`parameter_name`) puede tener más de **20 caracteres**.
+  - En las plantillas `recordatorio_pago_fisica_multi` y `recordatorio_pago_moral_multi`, la variable fue nombrada originalmente en Meta como `referencias_combinadas` (**22 caracteres**).
+  - Al enviar `"parameter_name": "referencias_combinadas"`, la pasarela de Meta rechaza la petición indicando que supera los 20 caracteres.
+  - Si se intenta recortar el nombre a 20 caracteres (`referencias_combinad`), la pasarela lo deja pasar pero el motor de plantillas de Meta devuelve **`(#100) Invalid parameter`**, porque no existe ninguna variable registrada con ese nombre truncado en la plantilla aprobada.
+* **Solución definitiva**:
+  1. En **Meta Business Suite** (WhatsApp Manager), editar `recordatorio_pago_fisica_multi` y `recordatorio_pago_moral_multi`.
+  2. Renombrar la variable `{{referencias_combinadas}}` a `{{referencias}}` (11 caracteres, idéntico a `dia_pago_fisica_multi` y `dia_pago_moral_multi`).
+  3. Enviar a aprobación y, una vez aprobada, hacer clic en **Sincronizar** en el CRM (**Configuración → Plantillas**).
+  4. Mientras se realiza ese cambio en Meta, se pueden utilizar directamente las plantillas equivalentes **`dia_pago_fisica_multi`** y **`dia_pago_moral_multi`**, las cuales ya utilizan `{{referencias}}` y funcionan de inmediato.
+* **Protección en el CRM backend**:
+  - El backend ahora valida preventivamente si alguna variable supera los 20 caracteres y emite un mensaje de error claro en español antes de intentar la llamada fallida a Meta.
+  - Además, el backend extrae el campo `error_data.details` de cualquier error de Meta para mostrar diagnósticos transparentes y completos en las respuestas de la API.
 
