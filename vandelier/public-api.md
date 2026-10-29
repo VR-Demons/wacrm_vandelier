@@ -240,6 +240,9 @@ Accepts a single message or an array of message objects. You can identify the re
 | `language` | `string` | No | Language code (e.g. `es_MX`, default `es_MX` or template's language). |
 | `immediate` | `boolean` | No | If `true`, sends immediately to Meta Graph API. If `false` (default), enqueues in outbox. |
 
+> [!TIP]
+> Pre-configured Postman calls for all 12 approved Meta templates (plus free-form text and outbox worker triggers) are available in Postman workspace **VRDemons** > Collection **Vandelier** > **`CRM_API > Templates`**. Full payload catalog is documented in [docs/wa_template_schemes.md](wa_template_schemes.md).
+
 #### Example: Send WhatsApp Template with Parameters (Immediate)
 ```bash
 curl -X POST https://crm.vandelierai.com/api/public/v1/messages \
@@ -252,6 +255,45 @@ curl -X POST https://crm.vandelierai.com/api/public/v1/messages \
       "1": "Jane Doe",
       "2": "$1,500.00",
       "3": "15 de Noviembre"
+    },
+    "immediate": true
+  }'
+```
+
+#### Example: Send WhatsApp Template with Named Variables (`aviso_adeudo_moral` - Persona Moral)
+```bash
+curl -X POST https://crm.vandelierai.com/api/public/v1/messages \
+  -H "x-api-key: sk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "+5215535750839",
+    "template": "aviso_adeudo_moral",
+    "language": "es_MX",
+    "variables": {
+      "contacto": "DIEGO",
+      "producto": "los préstamos",
+      "empresa": "Garciacano Garcia Diego",
+      "lista_adeudos": "• Folio 001227 - Fecha Límite: 18 de septiembre - $578,550.00 MXN — • Folio 001304 - Fecha Límite: 21 de octubre - $7,500.00 MXN",
+      "referencias": "001227, 001304"
+    },
+    "immediate": true
+  }'
+```
+
+#### Example: Send WhatsApp Template with Named Variables (`aviso_adeudo_fisica` - Persona Física)
+```bash
+curl -X POST https://crm.vandelierai.com/api/public/v1/messages \
+  -H "x-api-key: sk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone": "+5215512345678",
+    "template": "aviso_adeudo_fisica",
+    "language": "es_MX",
+    "variables": {
+      "cliente": "Carlos Mendoza",
+      "producto": "tu préstamo",
+      "lista_adeudos": "• Folio 002100 - Fecha Límite: 15 de octubre - $12,450.00 MXN",
+      "referencias": "002100"
     },
     "immediate": true
   }'

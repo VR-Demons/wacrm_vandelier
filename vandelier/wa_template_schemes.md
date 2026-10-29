@@ -1,12 +1,18 @@
 # Catálogo de Plantillas de WhatsApp (WhatsApp Templates) — Vandelier CRM
 
-Este documento detalla las **10 plantillas oficiales de WhatsApp** aprobadas en Meta para Vandelier CRM. Está diseñado específicamente para armar y probar llamadas directamente en **Postman** o en integraciones externas (n8n, APIs externas, sistemas de cobranza).
+Este documento detalla las **12 plantillas oficiales de WhatsApp** aprobadas en Meta para Vandelier CRM. Está diseñado específicamente para armar y probar llamadas directamente en **Postman** o en integraciones externas (n8n, APIs externas, sistemas de cobranza).
 
 ---
 
 ## 🚀 Configuración General en Postman
 
-### 1. Variables de Entorno Recomendadas en Postman
+### 1. Estructura y Ubicación en Postman
+* **Workspace**: `VRDemons`
+* **Colección**: `Vandelier`
+* **Carpeta principal**: `CRM_API` (contiene peticiones de texto libre y outbox)
+* **Subcarpeta de Plantillas**: `CRM_API > Templates` (contiene las 12 plantillas oficiales aprobadas de Meta y variantes de prueba)
+
+### 2. Variables de Entorno / Colección Recomendadas en Postman
 | Variable | Valor sugerido | Descripción |
 |---|---|---|
 | `baseUrl` | `https://crm.vandelierai.com` | Dominio del CRM |
@@ -41,6 +47,8 @@ Este documento detalla las **10 plantillas oficiales de WhatsApp** aprobadas en 
 | 8 | [`dia_pago_moral_multi`](#8-dia_pago_moral_multi) | `es_MX` | `UTILITY` | 🖼️ Imagen | 4 | Recordatorio el mero día de vencimiento para Empresa (Múltiples) |
 | 9 | [`default`](#9-default) | `es_MX` | `MARKETING` | 🖼️ Imagen | 1 | Prospección inicial y presentación de Vandelier AI |
 | 10 | [`hello_world`](#10-hello_world) | `en_US` | `UTILITY` | Texto fijo | 0 | Plantilla estándar de Meta para pruebas de conectividad |
+| 11 | [`aviso_adeudo_moral`](#11-aviso_adeudo_moral) | `es_MX` | `UTILITY` | Texto fijo | 5 | Notificación de adeudo vencido para Persona Moral / Empresa (1 o varios créditos) |
+| 12 | [`aviso_adeudo_fisica`](#12-aviso_adeudo_fisica) | `es_MX` | `UTILITY` | Texto fijo | 4 | Notificación de adeudo vencido para Persona Física / Individuos (1 o varios créditos) |
 
 ---
 
@@ -466,6 +474,113 @@ Plantilla de prueba estándar provista por Meta para verificar que la integraci�
   "template": "hello_world",
   "language": "en_US",
   "variables": {},
+  "immediate": true
+}
+```
+
+---
+
+### 11. `aviso_adeudo_moral`
+
+Plantilla de **Cobranza / Notificación de Adeudo Vencido** dirigida a Personas Morales (Empresas). Soporta de forma flexible uno o múltiples créditos/arrendamientos (préstamo, arrendamiento o mixtos) mediante variables nombradas.
+
+* **Idioma**: `es_MX`
+* **Categoría**: `UTILITY`
+* **Tipo de variables**: `Named`
+* **Encabezado**: *Ninguno* (o texto fijo)
+
+#### Texto del Cuerpo:
+> Hola \*{{contacto}}\*, espero te encuentres bien. Le escribimos de Vandelier para informarle que no recibimos el pago de {{producto}} a nombre de \*{{empresa}}\*. Le compartimos el detalle de los montos pendientes al día de hoy:
+>
+> {{lista_adeudos}}
+>
+> La cuenta de depósito es la siguiente:
+>
+> Titular: BANCO COVALTO SA DE IBM FID 1444
+> Banco: BBVA
+> Cuenta: 0125218543
+> CLABE: 012180001252185431
+> Fecha límite de pago: \*INMEDIATO\*
+> Referencia: {{referencias}}
+>
+> Recuerde que el atraso en los pagos afecta el historial crediticio de la persona moral y sus representantes y avales. Cualquier pregunta o duda, estamos a sus órdenes. ¡Saludos!
+
+#### Parámetros:
+| Variable | Clave en JSON | Longitud | Descripción | Ejemplo |
+|---|---|:---:|---|---|
+| Variable 1 | `contacto` | 8 chars | Nombre del contacto / representante | `"DIEGO"` o `"Lic. Sofía Herrera"` |
+| Variable 2 | `producto` | 8 chars | Tipo de producto con artículo (singular/plural) | `"los préstamos"` / `"el préstamo"` / `"el arrendamiento"` / `"sus financiamientos"` |
+| Variable 3 | `empresa` | 7 chars | Razón social de la Persona Moral | `"Garciacano Garcia Diego"` |
+| Variable 4 | `lista_adeudos` | 13 chars | Desglose de folios en 1 sola línea (sin `\n`) | `"• Folio 001227 - Fecha Límite: 18 de septiembre - $578,550.00 MXN — • Folio 001304 - Fecha Límite: 21 de octubre - $7,500.00 MXN"` |
+| Variable 5 | `referencias` | 11 chars | Folio(s) para depósito | `"001227, 001304"` |
+
+> [!IMPORTANT]
+> **Sin saltos de línea (`\n`)**: Meta Cloud API prohíbe saltos de línea (`\n` o `\r`) dentro del texto de los parámetros de plantilla (`#132018`). En `lista_adeudos`, concatena múltiples operaciones con separadores como `" — "` o `" | "`.
+
+#### Payload Postman (`raw JSON`):
+```json
+{
+  "phone": "+5215535750839",
+  "template": "aviso_adeudo_moral",
+  "language": "es_MX",
+  "variables": {
+    "contacto": "DIEGO",
+    "producto": "los préstamos",
+    "empresa": "Garciacano Garcia Diego",
+    "lista_adeudos": "• Folio 001227 - Fecha Límite: 18 de septiembre - $578,550.00 MXN — • Folio 001304 - Fecha Límite: 21 de octubre - $7,500.00 MXN",
+    "referencias": "001227, 001304"
+  },
+  "immediate": true
+}
+```
+
+---
+
+### 12. `aviso_adeudo_fisica`
+
+Plantilla de **Cobranza / Notificación de Adeudo Vencido** dirigida a Personas Físicas (Individuos). Mantiene un trato directo y personal, cubriendo uno o múltiples contratos sin redundancia de nombres.
+
+* **Idioma**: `es_MX`
+* **Categoría**: `UTILITY`
+* **Tipo de variables**: `Named`
+* **Encabezado**: *Ninguno* (o texto fijo)
+
+#### Texto del Cuerpo:
+> Hola \*{{cliente}}\*, espero te encuentres bien. Te escribimos de Vandelier para informarte que no recibimos el pago de {{producto}}. Te compartimos el detalle de los montos pendientes al día de hoy:
+>
+> {{lista_adeudos}}
+>
+> La cuenta de depósito es la siguiente:
+>
+> Titular: BANCO COVALTO SA DE IBM FID 1444
+> Banco: BBVA
+> Cuenta: 0125218543
+> CLABE: 012180001252185431
+> Fecha límite de pago: \*INMEDIATO\*
+> Referencia: {{referencias}}
+>
+> Recuerda que el atraso en los pagos afecta tu historial crediticio y el de tus avales. Cualquier pregunta o duda, estamos a tus órdenes. ¡Saludos!
+
+#### Parámetros:
+| Variable | Clave en JSON | Longitud | Descripción | Ejemplo |
+|---|---|:---:|---|---|
+| Variable 1 | `cliente` | 7 chars | Nombre del titular acreditado | `"Carlos Mendoza"` |
+| Variable 2 | `producto` | 8 chars | Tipo de financiamiento con pronombre posesivo | `"tu préstamo"` / `"tus préstamos"` / `"tu arrendamiento"` / `"tus financiamientos"` |
+| Variable 3 | `lista_adeudos` | 13 chars | Desglose de folios en 1 sola línea (sin `\n`) | `"• Folio 002100 - Fecha Límite: 15 de octubre - $12,450.00 MXN"` |
+| Variable 4 | `referencias` | 11 chars | Folio(s) para depósito | `"002100"` |
+
+#### Payload Postman (`raw JSON`):
+```json
+{
+  "phone": "+5215512345678",
+  "template": "aviso_adeudo_fisica",
+  "language": "es_MX",
+  "variables": {
+    "cliente": "Carlos Mendoza",
+    "producto": "tu préstamo",
+    "lista_adeudos": "• Folio 002100 - Fecha Límite: 15 de octubre - $12,450.00 MXN",
+    "referencias": "002100"
+  },
   "immediate": true
 }
 ```

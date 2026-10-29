@@ -7,6 +7,15 @@
         "POSTMAN_API_KEY": "${POSTMAN_API_KEY}",
         "POSTMAN_API_BASE_URL": "${POSTMAN_API_BASE_URL}"
       }
+    },
+    "n8n": {
+      "command": "npx",
+      "args": ["-y", "n8n-mcp"],
+      "env": {
+        "MCP_MODE": "stdio",
+        "N8N_API_URL": "${N8N_API_URL}",
+        "N8N_API_KEY": "${N8N_API_KEY}"
+      }
     }
   }
 }

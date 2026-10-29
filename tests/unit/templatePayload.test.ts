@@ -135,4 +135,54 @@ describe("buildTemplateComponents", () => {
       }
     ]);
   });
+
+  it("builds payload for aviso_adeudo_moral with named parameters and sanitizes newlines", () => {
+    const template = {
+      body: "Hola *{{contacto}}*, pago de {{producto}} a nombre de *{{empresa}}*: {{lista_adeudos}} Referencia: {{referencias}}"
+    };
+    const result = buildTemplateComponents(template, {
+      contacto: "DIEGO",
+      producto: "los préstamos",
+      empresa: "Garciacano Garcia Diego",
+      lista_adeudos: "• Folio 001227\n• Folio 001304",
+      referencias: "001227, 001304"
+    });
+
+    expect(result).toEqual([
+      {
+        type: "body",
+        parameters: [
+          { type: "text", parameter_name: "contacto", text: "DIEGO" },
+          { type: "text", parameter_name: "producto", text: "los préstamos" },
+          { type: "text", parameter_name: "empresa", text: "Garciacano Garcia Diego" },
+          { type: "text", parameter_name: "lista_adeudos", text: "• Folio 001227 — • Folio 001304" },
+          { type: "text", parameter_name: "referencias", text: "001227, 001304" }
+        ]
+      }
+    ]);
+  });
+
+  it("builds payload for aviso_adeudo_fisica with named parameters", () => {
+    const template = {
+      body: "Hola *{{cliente}}*, pago de {{producto}}: {{lista_adeudos}} Referencia: {{referencias}}"
+    };
+    const result = buildTemplateComponents(template, {
+      cliente: "Carlos Mendoza",
+      producto: "tu préstamo",
+      lista_adeudos: "• Folio 002100 - $12,450.00 MXN",
+      referencias: "002100"
+    });
+
+    expect(result).toEqual([
+      {
+        type: "body",
+        parameters: [
+          { type: "text", parameter_name: "cliente", text: "Carlos Mendoza" },
+          { type: "text", parameter_name: "producto", text: "tu préstamo" },
+          { type: "text", parameter_name: "lista_adeudos", text: "• Folio 002100 - $12,450.00 MXN" },
+          { type: "text", parameter_name: "referencias", text: "002100" }
+        ]
+      }
+    ]);
+  });
 });

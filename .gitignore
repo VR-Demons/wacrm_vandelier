@@ -45,3 +45,7 @@ scratch/
 
 # --- Antigravity local workspace customizations ---
 .agents/
+
+# --- Datos sensibles / CSVs de clientes ---
+*.csv
+vandelier/*.csv

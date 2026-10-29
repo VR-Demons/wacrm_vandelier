@@ -63,5 +63,6 @@ Copia las entradas que necesites de `.mcp.json.example` a `.mcp.json`. Formato:
 | Postgres/SQLite | Inspeccionar la BD durante el desarrollo |
 | Filesystem | Acceso acotado a rutas fuera del repo (úsalo con cuidado) |
 | Postman | Inspeccionar colecciones, especificaciones de APIs y entornos |
+| n8n | Inspeccionar, activar y ejecutar flujos de automatización en n8n |
 
 Añade cualquier otro según tu nicho (un MCP de pagos, de tu proveedor de mensajería, etc.).
