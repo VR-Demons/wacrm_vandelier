@@ -96,6 +96,25 @@ describe("buildTemplateComponents", () => {
     ]);
   });
 
+  it("builds payload with header image media ID when header_1 is numeric", () => {
+    const template = {
+      header: { format: "IMAGE" },
+      body: "Message"
+    };
+    const result = buildTemplateComponents(template, {
+      header_1: "1574159464522556"
+    });
+
+    expect(result).toEqual([
+      {
+        type: "header",
+        parameters: [
+          { type: "image", image: { id: "1574159464522556" } }
+        ]
+      }
+    ]);
+  });
+
   it("falls back to logo for header image if variable is missing", () => {
     const template = {
       header: { format: "IMAGE" },

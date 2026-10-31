@@ -18,17 +18,32 @@ export function buildTemplateComponents(
     } else if (headerFormat === "IMAGE") {
       const url = variables.header_1 || fallbackImageUrl;
       if (url) {
-        headerParams.push({ type: "image", image: { link: url } });
+        const trimmed = url.trim();
+        if (/^\d+$/.test(trimmed)) {
+          headerParams.push({ type: "image", image: { id: trimmed } });
+        } else {
+          headerParams.push({ type: "image", image: { link: trimmed } });
+        }
       } else {
         throw new Error("Debe configurar una imagen de plantillas en Ajustes");
       }
     } else if (headerFormat === "VIDEO") {
       if (variables.header_1) {
-        headerParams.push({ type: "video", video: { link: variables.header_1 } });
+        const trimmed = variables.header_1.trim();
+        if (/^\d+$/.test(trimmed)) {
+          headerParams.push({ type: "video", video: { id: trimmed } });
+        } else {
+          headerParams.push({ type: "video", video: { link: trimmed } });
+        }
       }
     } else if (headerFormat === "DOCUMENT") {
       if (variables.header_1) {
-        headerParams.push({ type: "document", document: { link: variables.header_1 } });
+        const trimmed = variables.header_1.trim();
+        if (/^\d+$/.test(trimmed)) {
+          headerParams.push({ type: "document", document: { id: trimmed } });
+        } else {
+          headerParams.push({ type: "document", document: { link: trimmed } });
+        }
       }
     }
     
