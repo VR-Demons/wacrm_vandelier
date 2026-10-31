@@ -142,18 +142,18 @@ export async function POST(req: Request) {
       flows,
       forceAllFlowsActive,
       overrideExigibilidad: Array.isArray(body.exigibilidadClients)
-        ? (body.exigibilidadClients as any[])
+        ? (body.exigibilidadClients as Record<string, unknown>[])
         : Array.isArray(body.exigibilidadData)
-        ? (body.exigibilidadData as any[])
+        ? (body.exigibilidadData as Record<string, unknown>[])
         : undefined,
       overrideAtrasados: Array.isArray(body.atrasadosClients)
-        ? (body.atrasadosClients as any[])
+        ? (body.atrasadosClients as Record<string, unknown>[])
         : Array.isArray(body.atrasadosData)
-        ? (body.atrasadosData as any[])
+        ? (body.atrasadosData as Record<string, unknown>[])
         : undefined,
       overrideConfig:
         body.config && typeof body.config === "object"
-          ? (body.config as any)
+          ? (body.config as Record<string, unknown>)
           : undefined,
     };
 

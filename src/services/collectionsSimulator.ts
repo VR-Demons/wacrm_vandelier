@@ -35,7 +35,7 @@ export interface ClientRecord {
   RFC?: string;
   Personalidad?: string;
   personalidad?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface SimulatorConfig {
@@ -71,7 +71,7 @@ export interface WhatsAppMessagePayload {
   totalAmount: number;
   totalFormatted: string;
   template: string;
-  variables: Record<string, any>;
+  variables: Record<string, string | number | boolean>;
   rawGroupItems: ClientRecord[];
 }
 
@@ -137,7 +137,7 @@ export interface SimulationResult {
 // HELPERS DE NORMALIZACIÓN Y FORMATO
 // ==========================================
 
-export const isValidContactName = (val: any): boolean => {
+export const isValidContactName = (val: unknown): boolean => {
   if (!val || typeof val !== 'string') return false;
   const trimmed = val.trim();
   if (
@@ -155,7 +155,7 @@ export const isValidContactName = (val: any): boolean => {
   return letters > digits;
 };
 
-export const formatDateLong = (fecha: any, timeZone = 'America/Mexico_City'): string => {
+export const formatDateLong = (fecha: string | number | Date | null | undefined, timeZone = 'America/Mexico_City'): string => {
   if (!fecha) return '';
   const d = new Date(fecha);
   if (isNaN(d.getTime())) return String(fecha);
@@ -167,7 +167,7 @@ export const formatDateLong = (fecha: any, timeZone = 'America/Mexico_City'): st
   });
 };
 
-export const formatDateShort = (fecha: any, timeZone = 'America/Mexico_City'): string => {
+export const formatDateShort = (fecha: string | number | Date | null | undefined, timeZone = 'America/Mexico_City'): string => {
   if (!fecha) return '';
   const d = new Date(fecha);
   if (isNaN(d.getTime())) return String(fecha);
@@ -179,7 +179,7 @@ export const formatDateShort = (fecha: any, timeZone = 'America/Mexico_City'): s
   });
 };
 
-export const formatCurrency = (monto: any): string => {
+export const formatCurrency = (monto: string | number | null | undefined): string => {
   const num = typeof monto === 'number' ? monto : parseFloat(String(monto || '').replace(/[$, ]/g, ''));
   if (!isNaN(num)) {
     return num.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
@@ -187,9 +187,9 @@ export const formatCurrency = (monto: any): string => {
   return '$0.00 MXN';
 };
 
-export const padRef = (folio: any): string => String(folio || '').padStart(6, '0');
+export const padRef = (folio: string | number | null | undefined): string => String(folio || '').padStart(6, '0');
 
-export const normalizePhone = (rawVal: any, isTestMode: boolean, testPhone?: string): string => {
+export const normalizePhone = (rawVal: string | number | null | undefined, isTestMode: boolean, testPhone?: string): string => {
   if (isTestMode) return testPhone || '+525510163879';
   const raw = String(rawVal || '').replace(/\D/g, '');
   if (raw.length === 10) return '+52' + raw;
@@ -198,7 +198,7 @@ export const normalizePhone = (rawVal: any, isTestMode: boolean, testPhone?: str
   return '+' + raw;
 };
 
-export const normalizeProduct = (prod: any): 'ARRENDAMIENTO' | 'PRESTAMO' => {
+export const normalizeProduct = (prod: unknown): 'ARRENDAMIENTO' | 'PRESTAMO' => {
   const norm = String(prod || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -207,7 +207,7 @@ export const normalizeProduct = (prod: any): 'ARRENDAMIENTO' | 'PRESTAMO' => {
   return norm.includes('ARREND') ? 'ARRENDAMIENTO' : 'PRESTAMO';
 };
 
-export const normalizePersonalidad = (pers: any): 'FISICA' | 'MORAL' => {
+export const normalizePersonalidad = (pers: unknown): 'FISICA' | 'MORAL' => {
   const norm = String(pers || '')
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -380,7 +380,7 @@ export function simulateCollectionsRun(
   // Cálculo individual de diffInDays
   const evaluatedExig = unpadExigClients.map(item => {
     const rawFecha = item.FechaExigibilidad || item.fechaExigibilidad;
-    const dateA = new Date(rawFecha as any).setHours(0, 0, 0, 0);
+    const dateA = new Date(rawFecha as string | number | Date).setHours(0, 0, 0, 0);
     const diff = Math.round((dateA - dateRefNormalized) / oneDay);
     return {
       ...item,
@@ -389,7 +389,7 @@ export function simulateCollectionsRun(
   });
 
   // Agrupación por: diffInDays + "_" + Telefono + "_" + Producto
-  const exigGroups: Record<string, { diffInDays: number; Telefono: string; Producto: string; items: any[] }> = {};
+  const exigGroups: Record<string, { diffInDays: number; Telefono: string; Producto: string; items: ClientRecord[] }> = {};
 
   for (const item of evaluatedExig) {
     const tel = String(item.Telefono || item.telefono || '').replace(/\D/g, '');
@@ -416,7 +416,8 @@ export function simulateCollectionsRun(
 
     const flowType: 'EarlyBird' | 'PayDay' = isEB ? 'EarlyBird' : 'PayDay';
     const items = group.items;
-    const item0 = items[0];
+    if (!items || items.length === 0) continue;
+    const item0 = items[0]!;
     const isMultiple = items.length > 1;
     const personalidad = normalizePersonalidad(item0.Personalidad || item0.personalidad);
     const isMoral = personalidad === 'MORAL';
@@ -441,7 +442,7 @@ export function simulateCollectionsRun(
     };
 
     let templateName = '';
-    let variables: Record<string, any> = {};
+    let variables: Record<string, string | number | boolean> = {};
     const totalGroupAmount = items.reduce((sum, it) => sum + (Number(it.Total || it.total) || 0), 0);
 
     if (flowType === 'EarlyBird') {
@@ -585,7 +586,7 @@ export function simulateCollectionsRun(
       isMultiple,
       diffInDays: group.diffInDays,
       foliosCount: items.length,
-      folios: items.map(it => it.Folio || it.folio),
+      folios: items.map(it => (it.Folio ?? it.folio ?? '')),
       totalAmount: totalGroupAmount,
       totalFormatted: formatCurrency(totalGroupAmount),
       template: templateName,
@@ -602,7 +603,7 @@ export function simulateCollectionsRun(
   // Cálculo individual de días de atraso y sendMail
   const evaluatedAtrasados = unpadAtrasados.map(item => {
     const rawFecha = item.FechaExigibilidad || item.fechaExigibilidad;
-    const dateA = new Date(rawFecha as any).setHours(0, 0, 0, 0);
+    const dateA = new Date(rawFecha as string | number | Date).setHours(0, 0, 0, 0);
     const diff = Math.round((dateA - dateRefNormalized) / oneDay);
     const diasAtraso = diff < 0 ? Math.abs(diff) : 0;
 
@@ -629,7 +630,7 @@ export function simulateCollectionsRun(
       Producto: string;
       sendMail: boolean;
       Email: string;
-      items: any[];
+      items: ClientRecord[];
     }
   > = {};
 
@@ -663,7 +664,8 @@ export function simulateCollectionsRun(
   // Filtrado y armado de Due WhatsApp & Due Email
   for (const group of Object.values(atrasadosGroups)) {
     const items = group.items;
-    const item0 = items[0];
+    if (!items || items.length === 0) continue;
+    const item0 = items[0]!;
     const isMultiple = items.length > 1;
     const personalidad = normalizePersonalidad(item0.Personalidad || item0.personalidad);
     const isMoral = personalidad === 'MORAL';
@@ -728,7 +730,7 @@ export function simulateCollectionsRun(
       }
 
       let templateName = '';
-      let variables: Record<string, any> = {};
+      let variables: Record<string, string | number | boolean> = {};
 
       if (!isMoral) {
         templateName = 'aviso_adeudo_fisica';
@@ -768,7 +770,7 @@ export function simulateCollectionsRun(
         diffInDays: group.diffInDays,
         diasAtraso: group.diasAtrasoMax,
         foliosCount: items.length,
-        folios: items.map(it => it.Folio || it.folio),
+        folios: items.map(it => (it.Folio ?? it.folio ?? '')),
         totalAmount: totalGroupAmount,
         totalFormatted: formatCurrency(totalGroupAmount),
         template: templateName,
@@ -857,7 +859,7 @@ export function simulateCollectionsRun(
         personalidad,
         diasAtraso: group.diasAtrasoMax,
         foliosCount: items.length,
-        folios: items.map(it => it.Folio || it.folio),
+        folios: items.map(it => (it.Folio ?? it.folio ?? '')),
         totalAmount: totalGroupAmount,
         totalFormatted: formatCurrency(totalGroupAmount),
         referencias: referenciasEmail,
@@ -901,7 +903,7 @@ export function simulateCollectionsRun(
 
   const filteredEmails = isFilterAll
     ? emails
-    : emails.filter(e => matchesFlowFilter('Email', configuredFlows) || matchesFlowFilter('Due', configuredFlows));
+    : emails.filter((_e) => matchesFlowFilter('Email', configuredFlows) || matchesFlowFilter('Due', configuredFlows));
 
   const filteredAmountWhatsApp = filteredWhatsAppMessages.reduce((sum, m) => sum + m.totalAmount, 0);
   const filteredAmountEmails = filteredEmails.reduce((sum, m) => sum + m.totalAmount, 0);
