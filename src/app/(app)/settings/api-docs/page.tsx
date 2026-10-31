@@ -209,6 +209,32 @@ export default function ApiDocsPage() {
         </div>
       </section>
 
+      {/* Collections Schedule Simulation */}
+      <section className="space-y-4">
+        <h2 className="border-b pb-2 text-xl font-semibold tracking-tight">6. Collections Schedule Simulation (getschedule)</h2>
+        <p className="text-text-2">
+          Real-time billing & collections simulation engine. Previews and projects WhatsApp and Email messages for the next cron run or a customized target day, flow, and timezone.
+        </p>
+
+        <div className="space-y-3 pt-2">
+          <h3 className="font-semibold">Endpoint: <code className="rounded bg-accent px-1.5 py-0.5 font-mono text-sm text-brand-text">GET /api/public/v1/schedule</code></h3>
+          <p className="text-sm font-medium">Query Parameters (all optional):</p>
+          <ul className="list-inside list-disc space-y-1 text-sm text-text-2 ml-2">
+            <li><code>date</code> / <code>dia</code>: Target execution day (defaults to next upcoming cron run). Accepts <code>next</code>, <code>today</code>, <code>tomorrow</code>, or <code>YYYY-MM-DD</code>.</li>
+            <li><code>flow</code> / <code>flujo</code>: Flow filter (defaults to <code>ALL</code>). Accepts <code>EarlyBird</code>, <code>PayDay</code>, <code>Due</code>, <code>Email</code>, or comma-separated list.</li>
+            <li><code>timezone</code> / <code>tz</code>: Target timezone (defaults to <code>America/Mexico_City</code> / <code>mexico</code>).</li>
+          </ul>
+
+          <div className="rounded-md bg-stone-900 p-4">
+            <pre className="overflow-x-auto text-sm text-stone-300">
+              <code>{`curl -X GET \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  "https://your-domain.com/api/public/v1/schedule?date=next&flow=ALL&timezone=mexico"`}</code>
+            </pre>
+          </div>
+        </div>
+      </section>
+
       {/* n8n Integration */}
       <section className="space-y-4">
         <h2 className="border-b pb-2 text-xl font-semibold tracking-tight">Integration Examples (n8n)</h2>
